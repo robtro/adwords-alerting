@@ -1,0 +1,50 @@
+{
+  "Alerts": [
+    {
+      "AlertName": "Alert #1",
+      "ReportDownloader": {
+        "ClassName": "NoOpAlertReportDownloader"
+      },
+      "Rules": [
+        {
+          "ClassName": "NoOpAlertRule"
+        },
+        {
+          "ClassName": "NoOpAlertRule"
+        }
+      ],
+      "AlertMessage": "Dummy alert message template",
+      "Actions": [
+        {
+          "ClassName": "NoOpAlertAction"
+        },
+        {
+          "ClassName": "NoOpAlertAction"
+        }
+      ]
+    },
+    {
+      "AlertName": "Alert #2",
+      "ReportDownloader": {
+        "ClassName": "NoOpAlertReportDownloader"
+      },
+      "Rules": [
+        {
+          "ClassName": "NoOpAlertRule"
+        },
+        {
+          "ClassName": "NoOpAlertRule"
+        }
+      ],
+      "AlertMessage": "Dummy alert message template",
+      "Actions": [
+        {
+          "ClassName": "NoOpAlertAction"
+        },
+        {
+          "ClassName": "NoOpAlertAction"
+        }
+      ]
+    }
+  ]
+}
