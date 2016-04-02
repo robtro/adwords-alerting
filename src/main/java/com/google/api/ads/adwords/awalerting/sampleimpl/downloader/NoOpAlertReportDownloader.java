@@ -25,7 +25,7 @@ import java.util.Set;
 
 /**
  * A dummy alert action implementation that doesn't download any report.
- * Note that it must have a constructor that takes an AdWordsSession and a JsonObject parameters.
+ * Note that it must have a constructor that takes an AdWordsSession and a JsonObject.
  *
  * <p>The JSON config should look like:
  * <pre>

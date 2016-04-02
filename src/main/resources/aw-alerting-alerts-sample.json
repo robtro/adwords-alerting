@@ -74,11 +74,11 @@
           "ClassName": "SimpleConsoleWriter"
         },
         {
-          "ClassName": "SQLDBPersister",
-          "DB_driver": "com.mysql.jdbc.Driver",
-          "DB_url": "jdbc:mysql://127.0.0.1:3306/AWAlerting?rewriteBatchedStatements=true&characterEncoding=utf-8",
-          "DB_username": "reportuser",
-          "DB_password": "1234"
+          "ClassName": "SqlDbPersister",
+          "Driver": "com.mysql.jdbc.Driver",
+          "Url": "jdbc:mysql://127.0.0.1:3306/AWAlerting?rewriteBatchedStatements=true&characterEncoding=utf-8",
+          "Login": "reportuser",
+          "Password": "1234"
         }
       ]
     }

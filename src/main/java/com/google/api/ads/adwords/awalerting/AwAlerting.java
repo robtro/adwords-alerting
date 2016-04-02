@@ -142,7 +142,9 @@ public class AwAlerting {
   }
 
   /**
-   * Load JSON configuration from the properties file.
+   * Load JSON configuration file specified in the properties file. First try to load the JSON
+   * configuration file from the same folder as the properties file; if it does not exist, try to
+   * load it from the default location.
    *
    * @param propertiesPath the path to the properties file
    * @return JSON configuration loaded from the json file
@@ -160,14 +162,14 @@ public class AwAlerting {
     try {
       Properties properties = initApplicationContextAndProperties(propertiesResource);
 
-      // Load alerts config from the same folder as properties file
+      // Load alerts config from the same folder as the properties file
       String alertsConfigFilename = properties.getProperty("aw.alerting.alerts");
       String propertiesFolder = propertiesResource.getFile().getParent();
       File alertsConfigFile = new File(propertiesFolder, alertsConfigFilename);
 
-      // If it does not exist, try the default resource folder
+      // If it does not exist, try the default resource folder according to maven structure.
       if (!alertsConfigFile.exists()) {
-        String alertsConfigFilepath = "java/resources/" + alertsConfigFilename;
+        String alertsConfigFilepath = "src/main/resources/" + alertsConfigFilename;
         alertsConfigFile = new File(alertsConfigFilepath);
       }
 

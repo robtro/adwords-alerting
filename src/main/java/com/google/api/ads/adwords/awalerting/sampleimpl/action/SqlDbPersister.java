@@ -41,22 +41,22 @@ import java.util.Date;
  * <p>The JSON config should look like:
  * <pre>
  * {
- *   "ClassName": "SQLDBPersister",
- *   "DB_driver": "...",
- *   "DB_url": "...",
- *   "DB_username": "...",
- *   "DB_password": "..."
+ *   "ClassName": "SqlDbPersister",
+ *   "Driver": "...",
+ *   "Url": "...",
+ *   "Login": "...",
+ *   "Password": "..."
  * }
  * </pre>
  */
-public class SQLDBPersister extends AlertAction {
-  private static final Logger LOGGER = LoggerFactory.getLogger(SQLDBPersister.class);
+public class SqlDbPersister extends AlertAction {
+  private static final Logger LOGGER = LoggerFactory.getLogger(SqlDbPersister.class);
 
   // config keys for database connection.
-  private static final String DB_DRIVER_TAG = "DB_driver"; // optional
-  private static final String DB_URL_TAG = "DB_url";
-  private static final String DB_USERNAME_TAG = "DB_username"; // optional
-  private static final String DB_PASSWORD_TAG = "DB_password"; // optional
+  private static final String DB_DRIVER_TAG = "Driver"; // optional
+  private static final String DB_URL_TAG = "Url";
+  private static final String DB_LOGIN_TAG = "Login"; // optional
+  private static final String DB_PASSWORD_TAG = "Password"; // optional
 
   // default values.
   private static final String DEFAULT_DB_DRIVER = "com.mysql.jdbc.Driver";
@@ -88,7 +88,7 @@ public class SQLDBPersister extends AlertAction {
   private int batchedInsertions;
   private int insertionsCount;
   
-  public SQLDBPersister(JsonObject config) throws ClassNotFoundException, SQLException {
+  public SqlDbPersister(JsonObject config) throws ClassNotFoundException, SQLException {
     super(config);
     
     String driver = DEFAULT_DB_DRIVER;
@@ -100,9 +100,9 @@ public class SQLDBPersister extends AlertAction {
         config.has(DB_URL_TAG), "Missing compulsory property: %s", DB_URL_TAG);
     String url = config.get(DB_URL_TAG).getAsString();
 
-    String username = null;
-    if (config.has(DB_USERNAME_TAG)) {
-      username = config.get(DB_USERNAME_TAG).getAsString();
+    String login = null;
+    if (config.has(DB_LOGIN_TAG)) {
+      login = config.get(DB_LOGIN_TAG).getAsString();
     }
 
     String password = null;
@@ -114,10 +114,10 @@ public class SQLDBPersister extends AlertAction {
     Class.forName(driver);
 
     // Open a DB connection.
-    if (username == null && password == null) {
+    if (login == null && password == null) {
       dbConnection = DriverManager.getConnection(url);
     } else {
-      dbConnection = DriverManager.getConnection(url, username, password);
+      dbConnection = DriverManager.getConnection(url, login, password);
     }
   }
 

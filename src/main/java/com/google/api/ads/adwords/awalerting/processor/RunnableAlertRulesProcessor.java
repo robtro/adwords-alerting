@@ -139,9 +139,6 @@ public class RunnableAlertRulesProcessor implements Runnable {
             "Alert message template contains invalid placeholder: %s", curMatch);
 
         String fieldName = curMatch.substring(1, length - 1);
-        Preconditions.checkArgument(report.getIndexMapping().containsKey(fieldName),
-            "Placeholder value is not available in downloaded report: %s", curMatch);
-
         int index = report.getFieldIndex(fieldName);
         alertMessageMatcher.appendReplacement(sb, row.get(index));
       }

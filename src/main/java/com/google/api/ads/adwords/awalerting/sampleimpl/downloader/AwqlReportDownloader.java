@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Class to handle all the concurrent file downloads from the reporting API.
- * Note that it must have a constructor that takes an AdWordsSession and a JsonObject parameters.
+ * Note that it must have a constructor that takes an AdWordsSession and a JsonObject.
  *
  * <p>An {@link ExecutorService} is created in order to handle all the threads. To initialize the
  * executor is necessary to call {@code initializeExecutorService}, and to finalize the executor
