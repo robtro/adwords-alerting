@@ -33,7 +33,7 @@ public class AlertActionsTest {
       "com.google.api.ads.adwords.awalerting.sampleimpl.action.SimpleConsoleWriter",
       "com.google.api.ads.adwords.awalerting.sampleimpl.action.SimpleLogFileWriter",
       "com.google.api.ads.adwords.awalerting.sampleimpl.action.PerAccountManagerEmailSender",
-      "com.google.api.ads.adwords.awalerting.sampleimpl.action.SQLDBPersister"};
+      "com.google.api.ads.adwords.awalerting.sampleimpl.action.SqlDbPersister"};
 
   /**
    * Test each alert action implementation adheres to the interface definition.

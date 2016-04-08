@@ -36,7 +36,7 @@ AwAlerting can be compiled using Maven by executing the following command:
 ## Run the project
 
 <pre>
-java -Xmx4G -jar aw-alerting.jar -file <file>
+java -Xmx4G -jar aw-alerting.jar -file &lt;file&gt;
 
 Arguments:
 
