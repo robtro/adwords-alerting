@@ -1,8 +1,8 @@
-# AwAlerting Framework
+# AdWords Alerting Framework
 
 ## Overview
 
-AwAlerting is an alerting framework based on AdWords reports from [AWQL]
+AdWords Alerting is an alerting framework based on AdWords reports from [AWQL]
 (https://developers.google.com/adwords/api/docs/guides/awql), with defined
 abstract classes for report downloader, alert rules and actions, where users
 can easily implement customized logic to plug in. This tool can be used by
@@ -17,11 +17,11 @@ You will need Java, Maven and MySQL installed before configuring the project.
 
 ### Build the project using Maven
 
-AwAlerting can be compiled using Maven by executing the following command:
+AdWords Alerting can be compiled using Maven by executing the following command:
 
 <code>$ mvn compile dependency:copy-dependencies package</code>
 
-### Configure AwAlerting
+### Configure AdWords Alerting
 
 <code> vi java/resources/aw-alerting-sample.properties</code>
 
