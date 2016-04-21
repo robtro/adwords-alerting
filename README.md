@@ -1,13 +1,17 @@
-# AdWords Alerting Framework
+# Alerting Framework on AdWords
 
 ## Overview
 
-AdWords Alerting is an alerting framework based on AdWords reports from [AWQL]
-(https://developers.google.com/adwords/api/docs/guides/awql), with defined
-abstract classes for report downloader, alert rules and actions, where users
-can easily implement customized logic to plug in. This tool can be used by
-novice users (simple alerts through configuration) as well as more advanced
-users (custom alerts through extension).
+Alerting Framework on AdWords is an open source Java framework for large-
+scale AdWords API alerting. It's based on the [Java AdWords API client
+library] (https://github.com/googleads/googleads-java-lib). This framework
+is capable of downloading AdWords report data and combining with other
+data feeds, and processing them according to specified alert rules and
+alert actions in the configuration. You can use our sample alerts to
+explore how it works or set up your own fully customized logic. The alerts
+available through this tool cater to both new and experienced users. Users
+can set up simple alerts with sample alert entities, or implement custom
+alert entities through the interfaces and plug into the system.
 
 ## Quick Start
 
@@ -17,31 +21,34 @@ You will need Java, Maven and MySQL installed before configuring the project.
 
 ### Build the project using Maven
 
-AdWords Alerting can be compiled using Maven by executing the following command:
+Alerting Framework on AdWords can be compiled using Maven by executing the
+following command:
+```
+$ mvn compile dependency:copy-dependencies package
+```
 
-<code>$ mvn compile dependency:copy-dependencies package</code>
-
-### Configure AdWords Alerting
-
-<code> vi java/resources/aw-alerting-sample.properties</code>
-
+### Configure Alerting Framework on AdWords
+```
+vi java/resources/aw-alerting-sample.properties
+```
  - Fill in the developer token, client ID / secret, manager account ID and
    refresh token.
 
-<code> vi java/resources/aw-alerting-alerts-sample.json</code>
-
+```
+vi java/resources/aw-alerting-alerts-sample.json
+```
  - This is the JSON configuration of the alerts that you want to run. It's
    referred from the .properties file in the same folder.
 
 ## Run the project
 
-<pre>
+```
 java -Xmx4G -jar aw-alerting.jar -file &lt;file&gt;
 
 Arguments:
 
- -accountIdsFile &lt;file&gt;  Consider ONLY the account IDs specified on the file
-                         to run the report
+ -accountIdsFile &lt;file&gt;  ONLY run the alerting logic for client customer IDs
+                         specified in the file
 
  -debug                  Display all the debug information. If option 'verbose'
                          is present, all the information will be displayed on
@@ -51,19 +58,19 @@ Arguments:
                          ./aw-alerting-sample.properties as an example)
 
  -help                   Display full help information
-</pre>
+```
 
-## Implement custom report downloader
+## Implement custom alert report downloader
 
 Alert report downloader is responsible for downloading report data for further
 processing (e.g. apply rules and actions). We provide an implementation
 [AwqlReportDownloader](https://github.com/googleads/aw-alerting/blob/master/java/com/google/api/ads/adwords/awalerting/sampleimpl/downloader/AwqlReportDownloader.java)
-that downloads report data using AWQL. Custom alert report downloader:
+that downloads report data using [AWQL](https://developers.google.com/adwords/api/docs/guides/awql).
+Custom alert report downloader:
  - Should derive from
-   <code>com.google.api.ads.adwords.awalerting.downloader.AlertReportDownloader</code>,
+   ``com.google.api.ads.adwords.awalerting.downloader.AlertReportDownloader``,
    and
- - Must have a constructor with an AdWordsSession and a JsonObject parameters
-   to work properly.
+ - Must have a constructor with a JsonObject parameter to work properly.
 
 ## Implement custom alert rules
 
@@ -75,7 +82,7 @@ Alert rules are responsible for:
 
 Custom alert rules:
  - Should derive from
-   <code>com.google.api.ads.adwords.awalerting.rule.AlertRule</code>, and
+   ``com.google.api.ads.adwords.awalerting.rule.AlertRule``, and
  - Must have a constructor with a JsonObject parameter to work properly, and
  - Must be stateless, since the same instance will be shared among multiple
    threads.
@@ -89,7 +96,7 @@ Alert actions are responsible for processing each report entry, and:
 
 Custom alert actions:
  - Should derive from
-   <code>com.google.api.ads.adwords.awalerting.action.AlertAction</code>, and
+   ``com.google.api.ads.adwords.awalerting.action.AlertAction``, and
  - Must have a constructor with a JsonObject parameter to work properly, and
  - Must NOT modify report entries (since an report entry may be processed by
    multiple alert actions). Any modification should be done by AlertRules.
@@ -98,11 +105,11 @@ Custom alert actions:
 
 Just edit the JSON configuration file:
 
- - Under <code>"ReportDownloader"</code>, put class name of the custom alert
-   report downloader in <code>"ClassName"</code> field, along with any other
+ - Under ``ReportDownloader``, put class name of the custom alert
+   report downloader in ``ClassName`` field, along with any other
    parameters that will be passed to the custom alert report downloader's
    constructor. For example:
- <pre>
+ ```
     "ReportDownloader": {
       "ClassName": "AwqlReportDownloader",
       "ReportQuery": {
@@ -112,12 +119,12 @@ Just edit the JSON configuration file:
         "DateRange": "YESTERDAY"
       }
     }
- </pre>
+ ```
 
- - Under <code>"Rules"</code>, put class name of the custom alert rule in
-   <code>"ClassName"</code> field, along with other parameters that will be
+ - Under ``Rules``, put class name of the custom alert rule in
+   ``ClassName`` field, along with other parameters that will be
    passed to the custom alert rule's constructor. For example:
- <pre>
+ ```
     "Rules": [
       {
         "ClassName": "AddAccountManager"
@@ -126,12 +133,12 @@ Just edit the JSON configuration file:
         "ClassName": "AddAccountMonthlyBudget"
       }
     ]
- </pre>
+ ```
 
- - Under <code>"Actions"</code>, put class name of the custom alert rule in
-   <code>"ClassName"</code> field, along with other parameters that will be
+ - Under ``Actions``, put class name of the custom alert rule in
+   ``ClassName`` field, along with other parameters that will be
    passed to the custom alert rule's constructor. For example:
- <pre>
+ ```
     "Actions": [
       {
         "ClassName": "SimpleConsoleWriter"
@@ -142,12 +149,12 @@ Just edit the JSON configuration file:
         "CC": "abc@example.com,xyz@example.com"
       }
     ]
- </pre>
+ ```
 
 ### Fine print
 Pull requests are very much appreciated. Please sign the
 [Google Code contributor license agreement]
-(http://code.google.com/legal/individual-cla-v1.0.html)
+(https://cla.developers.google.com/about/google-individual)
 (There is a convenient online form) before submitting.
 
 <dl>
