@@ -76,7 +76,7 @@
         {
           "ClassName": "SqlDbPersister",
           "Driver": "com.mysql.jdbc.Driver",
-          "Url": "jdbc:mysql://127.0.0.1:3306/AWAlerting?rewriteBatchedStatements=true&characterEncoding=utf-8",
+          "Url": "jdbc:mysql://address=(protocol=tcp)(host=localhost)(port=3306)/AWAlerting?rewriteBatchedStatements=true&characterEncoding=utf-8&useSSL=false",
           "Login": "reportuser",
           "Password": "1234"
         }
