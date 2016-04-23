@@ -17,7 +17,6 @@ package com.google.api.ads.adwords.awalerting.sampleimpl.downloader;
 import static org.junit.Assert.assertTrue;
 
 import com.google.api.ads.adwords.awalerting.AlertReportDownloader;
-import com.google.api.ads.adwords.lib.client.AdWordsSession;
 import com.google.gson.JsonObject;
 
 import org.junit.Test;
@@ -31,7 +30,8 @@ import org.junit.runners.JUnit4;
 public class AlertReportDownloaderTest {
   private static final String[] ALERT_REPORT_DOWNLOADER_CLASS_NAMES = {
       "com.google.api.ads.adwords.awalerting.sampleimpl.downloader.NoOpAlertReportDownloader",
-      "com.google.api.ads.adwords.awalerting.sampleimpl.downloader.AwqlReportDownloader"};
+      "com.google.api.ads.adwords.awalerting.sampleimpl.downloader.AwqlReportDownloader",
+      "com.google.api.ads.adwords.awalerting.sampleimpl.downloader.SqlDbReportDownloader"};
 
   /**
    * Test each alert report downloader implementation adheres to the interface definition.
@@ -46,10 +46,8 @@ public class AlertReportDownloaderTest {
       assertTrue(
           assertMsg, AlertReportDownloader.class.isAssignableFrom(alertReportDownloaderClass));
 
-      // Check that the alert report downloader class has a construction with
-      // an AdWordsSession.Builder and a JsonObject arguments
-      alertReportDownloaderClass.getConstructor(
-          new Class<?>[] {AdWordsSession.class, JsonObject.class});
+      // Check that the alert report downloader class has a construction with a JsonObject argument
+      alertReportDownloaderClass.getConstructor(new Class<?>[] {JsonObject.class});
     }
   }
 }

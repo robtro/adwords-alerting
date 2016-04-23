@@ -15,7 +15,7 @@
 package com.google.api.ads.adwords.awalerting.report;
 
 import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionReportType;
-import com.google.api.client.util.Joiner;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 
 import java.util.ArrayList;
@@ -26,7 +26,7 @@ import java.util.Map;
  * Report data corresponding to a downloaded report for one account.
  */
 public class ReportData {
-  static final String SEPARATOR = System.getProperty("line.separator");
+  private static final String SEPARATOR = System.getProperty("line.separator");
   
   private final ReportDefinitionReportType reportType;
 

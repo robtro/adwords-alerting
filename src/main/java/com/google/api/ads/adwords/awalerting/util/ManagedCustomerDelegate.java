@@ -27,9 +27,11 @@ import com.google.api.ads.adwords.lib.selectorfields.v201603.cm.ManagedCustomerF
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+
+import javax.annotation.Nullable;
 
 /**
  * {@code ManagedCustomerDelegate} encapsulates the {@code ManagedCustomerServiceInterface}.
@@ -55,7 +57,7 @@ public class ManagedCustomerDelegate {
   }
 
   /**
-   * Gets all the accounts IDs for the {@link AdWordsSession}.
+   * Gets all the client customer IDs for the {@link AdWordsSession}.
    *
    * <p>The accounts are read in complete, and after all accounts have been retrieved, their IDs
    * are extracted and returned in a {@code Set}.
@@ -63,8 +65,8 @@ public class ManagedCustomerDelegate {
    * @return the {@link Set} with the IDs of the found accounts
    * @throws ApiException error from the API when retrieving the accounts
    */
-  public Set<Long> getAccountIds() throws ApiException {
-    Set<Long> accountIdsSet = new HashSet<Long>();
+  public Set<Long> getClientCustomerIds() throws ApiException {
+    Set<Long> clientCustomerIdsSet = new LinkedHashSet<Long>();
     ManagedCustomerPage managedCustomerPage;
     int offset = 0;
 
@@ -81,31 +83,39 @@ public class ManagedCustomerDelegate {
 
       try {
         managedCustomerPage = managedCustomerService.get(selector);
-        addAccountIds(managedCustomerPage.getEntries(), accountIdsSet);
+        addClientCustomerIds(managedCustomerPage, clientCustomerIdsSet);
       } catch (ApiException e) {
         // Retry once.
         managedCustomerPage = managedCustomerService.get(selector);
-        addAccountIds(managedCustomerPage.getEntries(), accountIdsSet);
+        addClientCustomerIds(managedCustomerPage, clientCustomerIdsSet);
       }
 
-      LOGGER.info("{} accounts retrieved.", accountIdsSet.size());
+      LOGGER.info("{} accounts retrieved.", clientCustomerIdsSet.size());
       offset += NUMBER_OF_RESULTS;
       selector = builder.increaseOffsetBy(NUMBER_OF_RESULTS).build();
     } while (managedCustomerPage.getTotalNumEntries() > offset);
 
-    return accountIdsSet;
+    return clientCustomerIdsSet;
   }
 
 
   /**
-   * Add account IDs into the result set.
+   * Add client customer IDs into the result set.
    *
-   * @param accounts the list of accounts
-   * @param accountIdsSet the result set of account IDs
+   * @param managedCustomerPage the page of managed customers
+   * @param clientCustomerIdsSet the result set of client customer IDs
    */
-  private void addAccountIds(List<ManagedCustomer> accounts, Set<Long> accountIdsSet) {
-    for (ManagedCustomer account : accounts) {
-      accountIdsSet.add(account.getCustomerId());
+  private static void addClientCustomerIds(
+      @Nullable ManagedCustomerPage managedCustomerPage, Set<Long> clientCustomerIdsSet) {
+    if (managedCustomerPage != null) {
+      List<ManagedCustomer> managedCustomers = managedCustomerPage.getEntries();
+      
+      // ManagedCustomerPage.getEntries() could return null.
+      if (managedCustomers != null) {
+        for (ManagedCustomer managedCustomer : managedCustomers) {
+          clientCustomerIdsSet.add(managedCustomer.getCustomerId());
+        }
+      }
     }
   }
 }

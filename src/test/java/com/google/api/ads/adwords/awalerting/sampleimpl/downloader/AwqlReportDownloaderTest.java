@@ -22,7 +22,8 @@ import com.google.api.ads.adwords.awalerting.AlertProcessingException;
 import com.google.api.ads.adwords.awalerting.report.ReportData;
 import com.google.api.ads.adwords.awalerting.util.TestEntitiesGenerator;
 import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionReportType;
-import com.google.api.ads.adwords.lib.client.AdWordsSession;
+import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
+import com.google.api.ads.common.lib.exception.ValidationException;
 import com.google.common.util.concurrent.Futures;
 import com.google.gson.JsonObject;
 
@@ -62,13 +63,11 @@ public class AwqlReportDownloaderTest {
   
   @Before
   public void setUp() throws Exception {
-    AdWordsSession session = TestEntitiesGenerator.getTestAdWordsSession();
     JsonObject config = TestEntitiesGenerator.getTestReportDownloaderConfig();
-    mockedAwqlReportDownloader = new AwqlReportDownloader(session, config);
+    mockedAwqlReportDownloader = new AwqlReportDownloader(config);
 
     MockitoAnnotations.initMocks(this);
 
-    mockedAwqlReportDownloader.setAwReportDefinitionDownloader(reportDefinitionDownloader);
     mockReportDefinitionDownloader();
   }
 
@@ -94,33 +93,36 @@ public class AwqlReportDownloaderTest {
    * Tests the downloadReports(...).
    */
   @Test
-  public void testDownloadReports() throws AlertProcessingException {
-   Mockito.doAnswer(new Answer<Future<ReportData>>() {
-     @Override
-     public Future<ReportData> answer(InvocationOnMock invocation) throws Throwable {
-       ((CountDownLatch) invocation.getArguments()[2]).countDown();
-       return Futures.immediateFuture(TestEntitiesGenerator.getTestReportData());
-     }
-   }).when(mockedAwqlReportDownloader).submitCallableDownloader(
-       Mockito.<ExecutorService>anyObject(),
-       Mockito.<CallableAwqlReportDownloader>anyObject(),
-       Mockito.<CountDownLatch>anyObject());
+  public void testDownloadReports() throws ValidationException, AlertProcessingException {
+    Mockito.doAnswer(new Answer<Future<ReportData>>() {
+      @Override
+      public Future<ReportData> answer(InvocationOnMock invocation) throws Throwable {
+        ((CountDownLatch) invocation.getArguments()[2]).countDown();
+        return Futures.immediateFuture(TestEntitiesGenerator.getTestReportData());
+      }
+    }).when(mockedAwqlReportDownloader).submitCallableDownloader(
+        Mockito.<ExecutorService>anyObject(),
+        Mockito.<CallableAwqlReportDownloader>anyObject(),
+        Mockito.<CountDownLatch>anyObject());
    
-   Set<Long> cids = new HashSet<Long>(NUMBER_OF_ACCOUNTS);
-   for (int i = 1; i <= NUMBER_OF_ACCOUNTS; i++) {
-     cids.add(Long.valueOf(i));
-   }
-   List<ReportData> results = mockedAwqlReportDownloader.downloadReports(cids);
+    Set<Long> cids = new HashSet<Long>(NUMBER_OF_ACCOUNTS);
+    for (int i = 1; i <= NUMBER_OF_ACCOUNTS; i++) {
+      cids.add(Long.valueOf(i));
+    }
 
-   ArgumentCaptor<CountDownLatch> argument = ArgumentCaptor.forClass(CountDownLatch.class);
-   verify(mockedAwqlReportDownloader, times(NUMBER_OF_ACCOUNTS)).submitCallableDownloader(
-       Mockito.<ExecutorService>anyObject(),
-       Mockito.<CallableAwqlReportDownloader>anyObject(),
-       argument.capture());
+    ImmutableAdWordsSession session = TestEntitiesGenerator.getTestAdWordsSession();
+    List<ReportData> results =
+        mockedAwqlReportDownloader.downloadReports(session, reportDefinitionDownloader, cids);
+
+    ArgumentCaptor<CountDownLatch> argument = ArgumentCaptor.forClass(CountDownLatch.class);
+    verify(mockedAwqlReportDownloader, times(NUMBER_OF_ACCOUNTS)).submitCallableDownloader(
+        Mockito.<ExecutorService>anyObject(),
+        Mockito.<CallableAwqlReportDownloader>anyObject(),
+        argument.capture());
   
-   assertEquals("CountDownLactch should reach 0 after all download jobs complete",
-       argument.getValue().getCount(), 0);
-   assertEquals("Number of reports downloaded should equal to number of accounts",
-       results.size(), NUMBER_OF_ACCOUNTS);
+    assertEquals("CountDownLactch should reach 0 after all download jobs complete",
+        argument.getValue().getCount(), 0);
+    assertEquals("Number of reports downloaded should equal to number of accounts",
+        results.size(), NUMBER_OF_ACCOUNTS);
   }
 }

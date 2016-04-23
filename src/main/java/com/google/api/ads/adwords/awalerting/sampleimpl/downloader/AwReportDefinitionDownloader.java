@@ -46,7 +46,7 @@ public class AwReportDefinitionDownloader {
   private int retriesCount = RETRIES_COUNT;
   private int backoffInterval = BACKOFF_INTERVAL;
 
-  private AdWordsSession session;
+  private final AdWordsSession session;
 
   private final Map<ReportDefinitionReportType, Map<String, String>> reportFieldsMappings =
       new HashMap<ReportDefinitionReportType, Map<String, String>>();

@@ -16,7 +16,7 @@ package com.google.api.ads.adwords.awalerting.sampleimpl.downloader;
 
 import com.google.api.ads.adwords.awalerting.AlertReportDownloader;
 import com.google.api.ads.adwords.awalerting.report.ReportData;
-import com.google.api.ads.adwords.lib.client.AdWordsSession;
+import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.gson.JsonObject;
 
 import java.util.ArrayList;
@@ -25,7 +25,6 @@ import java.util.Set;
 
 /**
  * A dummy alert action implementation that doesn't download any report.
- * Note that it must have a constructor that takes an AdWordsSession and a JsonObject.
  *
  * <p>The JSON config should look like:
  * <pre>
@@ -36,15 +35,15 @@ import java.util.Set;
  */
 public class NoOpAlertReportDownloader extends AlertReportDownloader {
   /**
-   * @param session the adwords session
    * @param config the JsonObject for this alert report downloader configuration
    */
-  public NoOpAlertReportDownloader(AdWordsSession session, JsonObject config) {
-    super(session, config);
+  public NoOpAlertReportDownloader(JsonObject config) {
+    super(config);
   }
 
   @Override
-  public List<ReportData> downloadReports(Set<Long> accountIds) {
+  public List<ReportData> downloadReports(
+      ImmutableAdWordsSession protoSession, Set<Long> clientCustomerIds) {
     return new ArrayList<ReportData>();
   }
 }

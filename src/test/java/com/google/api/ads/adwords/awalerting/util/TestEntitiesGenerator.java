@@ -24,6 +24,7 @@ import com.google.api.ads.adwords.awalerting.sampleimpl.action.NoOpAlertAction;
 import com.google.api.ads.adwords.awalerting.sampleimpl.rule.NoOpAlertRule;
 import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionReportType;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
+import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.api.ads.common.lib.exception.ValidationException;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.gson.JsonObject;
@@ -54,10 +55,10 @@ public class TestEntitiesGenerator {
                .withOAuth2Credential(new GoogleCredential.Builder().build());
   }
   
-  public static AdWordsSession getTestAdWordsSession() throws ValidationException {
-    return getTestAdWordsSessionBuilder().build();
+  public static ImmutableAdWordsSession getTestAdWordsSession() throws ValidationException {
+    return getTestAdWordsSessionBuilder().buildImmutable();
   }
-
+  
   public static JsonObject getTestReportDownloaderConfig() {
     String jsonConfigStr = "{"
                          + "  \"ClassName\": \"AwqlReportDownloader\", "

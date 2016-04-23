@@ -90,9 +90,9 @@ public class PerAccountManagerEmailSender extends AlertAction {
       emailsMap.put(to, email);
     }
 
-    String accountId = entry.getFieldValue("ExternalCustomerId");
+    String clientCustomerId = entry.getFieldValue("ExternalCustomerId");
     String alertMessage = entry.getFieldValue("AlertMessage");
-    email.addAlert(accountId, alertMessage);
+    email.addAlert(clientCustomerId, alertMessage);
   }
 
   /**
@@ -124,11 +124,11 @@ public class PerAccountManagerEmailSender extends AlertAction {
     /**
      * Add alert message to the corresponding alert email.
      *
-     * @param accountId the account ID
+     * @param clientCustomerId the client customer ID
      * @param alertMessage the alert message
      */
-    public void addAlert(String accountId, String alertMessage) {
-      alertsMap.put(accountId, alertMessage);
+    public void addAlert(String clientCustomerId, String alertMessage) {
+      alertsMap.put(clientCustomerId, alertMessage);
     }
 
     /**
@@ -173,9 +173,9 @@ public class PerAccountManagerEmailSender extends AlertAction {
       sb.append(NEWLINE);
       sb.append(NEWLINE);
 
-      for (String accountId : alertsMap.keySet()) {
-        Collection<String> alertMessages = alertsMap.get(accountId);
-        sb.append("Account ID: " + accountId);
+      for (String clientCustomerId : alertsMap.keySet()) {
+        Collection<String> alertMessages = alertsMap.get(clientCustomerId);
+        sb.append("Account ID: " + clientCustomerId);
         sb.append(NEWLINE);
         for (String alertMessage : alertMessages) {
           sb.append("  " + alertMessage);

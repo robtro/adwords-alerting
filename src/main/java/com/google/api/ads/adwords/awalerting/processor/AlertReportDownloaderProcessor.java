@@ -19,7 +19,7 @@ import com.google.api.ads.adwords.awalerting.AlertProcessingException;
 import com.google.api.ads.adwords.awalerting.AlertReportDownloader;
 import com.google.api.ads.adwords.awalerting.report.ReportData;
 import com.google.api.ads.adwords.awalerting.util.ConfigTags;
-import com.google.api.ads.adwords.lib.client.AdWordsSession;
+import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.gson.JsonObject;
 
@@ -33,23 +33,21 @@ public class AlertReportDownloaderProcessor {
   private AlertReportDownloader reportDownloader;
 
   /**
-   * @param session the adwords session
    * @param config the report downloader configuration
    */
-  public AlertReportDownloaderProcessor(AdWordsSession session, JsonObject config)
+  public AlertReportDownloaderProcessor(JsonObject config)
       throws AlertConfigLoadException {
-    reportDownloader = getReportDownloaderObject(session, config);
+    reportDownloader = getReportDownloaderObject(config);
   }
 
   /**
    * Construct the AlertReportDownloader object according to the JSON configuration.
    *
-   * @param session the adwords session
    * @param config the JSON configuration of the report downloader
    * @return the instantiated AlertReportDownloader object
    */
-  protected AlertReportDownloader getReportDownloaderObject(
-      AdWordsSession session, JsonObject config) throws AlertConfigLoadException {
+  protected AlertReportDownloader getReportDownloaderObject(JsonObject config)
+      throws AlertConfigLoadException {
     String className = config.get(ConfigTags.CLASS_NAME).getAsString();
     if (!className.contains(".")) {
       className = "com.google.api.ads.adwords.awalerting.sampleimpl.downloader." + className;
@@ -62,16 +60,21 @@ public class AlertReportDownloaderProcessor {
             "Wrong AlertReportDownloader class specified: " + className);
       }
 
-      return (AlertReportDownloader) c.getConstructor(new Class<?>[] {
-          AdWordsSession.class, JsonObject.class}).newInstance(session, config);
+      return (AlertReportDownloader) c.getConstructor(new Class<?>[] {JsonObject.class})
+          .newInstance(config);
     } catch (Exception e) {
       throw new AlertConfigLoadException(
           "Error constructing AlertReportDownloader with config: " + config, e);
     }
   }
 
-  public List<ReportData> downloadReports(Set<Long> accountIds) throws AlertProcessingException {
-    return reportDownloader.downloadReports(accountIds);
+  /**
+   * Use the AlertReportDownloader object to download reports.
+   */
+  public List<ReportData> downloadReports(
+      ImmutableAdWordsSession protoSession, Set<Long> clientCustomerIds)
+      throws AlertProcessingException {
+    return reportDownloader.downloadReports(protoSession, clientCustomerIds);
   }
 
   /**

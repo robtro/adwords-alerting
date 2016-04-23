@@ -19,9 +19,8 @@ import com.google.api.ads.adwords.awalerting.AlertReportDownloader;
 import com.google.api.ads.adwords.awalerting.report.AwqlReportQuery;
 import com.google.api.ads.adwords.awalerting.report.ReportData;
 import com.google.api.ads.adwords.awalerting.report.ReportDataLoader;
-import com.google.api.ads.adwords.awalerting.util.AdWordsSessionCopier;
-import com.google.api.ads.adwords.lib.client.AdWordsSession;
-import com.google.common.annotations.VisibleForTesting;
+import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
+import com.google.api.ads.common.lib.exception.ValidationException;
 import com.google.common.base.Stopwatch;
 import com.google.gson.JsonObject;
 
@@ -41,8 +40,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Class to handle all the concurrent file downloads from the reporting API.
- * Note that it must have a constructor that takes an AdWordsSession and a JsonObject.
- *
+ * 
  * <p>An {@link ExecutorService} is created in order to handle all the threads. To initialize the
  * executor is necessary to call {@code initializeExecutorService}, and to finalize the executor
  * is necessary to call {@code finalizeExecutorService} after all the downloads are done, and the
@@ -69,21 +67,19 @@ public class AwqlReportDownloader extends AlertReportDownloader {
   private static final int NUM_THREADS = 20;
   private int numThreads = NUM_THREADS;
 
-  private AwqlReportQuery reportQuery;
-  private AdWordsSessionCopier sessionBuilderSynchronizer;
-  private AwReportDefinitionDownloader reportDefinitionDownloader;
+  private final AwqlReportQuery reportQuery;
 
-  private class DownloadJob {
-    final Long accountId;
+  private static class DownloadJob {
+    final Long clientCustomerId;
     final Future<ReportData> future;
 
-    DownloadJob(Long accountId, Future<ReportData> future) {
-      this.accountId = accountId;
+    DownloadJob(Long clientCustomerId, Future<ReportData> future) {
+      this.clientCustomerId = clientCustomerId;
       this.future = future;
     }
 
-    public Long getAccountId() {
-      return accountId;
+    public Long getClientCustomerId() {
+      return clientCustomerId;
     }
 
     public Future<ReportData> getFuture() {
@@ -92,30 +88,55 @@ public class AwqlReportDownloader extends AlertReportDownloader {
   }
 
   /**
-   * @param session the adwords session
    * @param config the JsonObject for this alert report downloader configuration
    */
-  public AwqlReportDownloader(AdWordsSession session, JsonObject config) {
-    super(session, config);
-    
-    this.sessionBuilderSynchronizer = new AdWordsSessionCopier(session);
-    this.reportDefinitionDownloader = new AwReportDefinitionDownloader(session);
-    
+  public AwqlReportDownloader(JsonObject config) {
+    super(config);
+
     JsonObject reportQueryConfig = config.getAsJsonObject(REPORT_QUERY_TAG);
     this.reportQuery = new AwqlReportQuery(reportQueryConfig);
   }
 
   /**
-   * Downloads the specified report for all specified CIDs. Prints out list of failed CIDs.
-   * Returns List<File> for all successful downloads.
+   * Downloads the specified report for all specified CIDs.
    *
-   * @param accountIds CIDs to download the report for
+   * @param protoSession the prototype adwords session used for downloading reports
+   * @param clientCustomerIds the client customer IDs to download the report for
    * @return Collection of File objects reports have been downloaded to
    */
   @Override
-  public List<ReportData> downloadReports(Set<Long> accountIds)
+  public List<ReportData> downloadReports(
+      ImmutableAdWordsSession protoSession, Set<Long> clientCustomerIds)
       throws AlertProcessingException {
-    CountDownLatch latch = new CountDownLatch(accountIds.size());
+    ImmutableAdWordsSession session = null;
+    try {
+      // No need to specify clientCustomerId for getting report definition.
+      session = buildSessionForCid(protoSession, null);
+    } catch (ValidationException e) {
+      throw new AlertProcessingException(
+          "Failed to create valid adwords session for report defintion downloader.", e);
+    }
+
+    AwReportDefinitionDownloader reportDefinitionDownloader =
+        new AwReportDefinitionDownloader(session);
+    return downloadReports(protoSession, reportDefinitionDownloader, clientCustomerIds);
+  }
+
+    /**
+   * Downloads the specified report for all specified CIDs.
+   * Returns List<File> for all successful downloads, and prints out list of failed CIDs.
+   *
+   * @param protoSession the prototype adwords session used for downloading reports
+   * @param reportDefinitionDownloader report definition downloader (for getting fields mapping)
+   * @param clientCustomerIds the client customer IDs to download the report for
+   * @return Collection of File objects reports have been downloaded to
+   */
+  protected List<ReportData> downloadReports(
+      ImmutableAdWordsSession protoSession,
+      AwReportDefinitionDownloader reportDefinitionDownloader,
+      Set<Long> clientCustomerIds)
+      throws AlertProcessingException {
+    CountDownLatch latch = new CountDownLatch(clientCustomerIds.size());
     ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
     Stopwatch stopwatch = Stopwatch.createStarted();
 
@@ -124,16 +145,25 @@ public class AwqlReportDownloader extends AlertReportDownloader {
     Map<String, String> fieldsMapping =
         reportDefinitionDownloader.getFieldsMapping(reportQuery.getReportTypeEnum());
     ReportDataLoader loader = new ReportDataLoader(reportQuery.getReportTypeEnum(), fieldsMapping);
-
-    List<DownloadJob> downloadJobs = new ArrayList<DownloadJob>(accountIds.size());
-    for (Long accountId : accountIds) {
-      // We create a copy of the AdWordsSession specific for the Account.
-      AdWordsSession adWordsSession = sessionBuilderSynchronizer.getAdWordsSessionCopy(accountId);
+    
+    List<DownloadJob> downloadJobs = new ArrayList<DownloadJob>(clientCustomerIds.size());
+    List<Long> failures = new ArrayList<Long>();
+    ImmutableAdWordsSession session = null;
+    for (Long clientCustomerId : clientCustomerIds) {
+      try {
+        session = buildSessionForCid(protoSession, clientCustomerId);
+      } catch (ValidationException e) {
+        LOGGER.error(
+            "Failed to create valid adwords session for CID {}, skipping it.", clientCustomerId);
+        failures.add(clientCustomerId);
+        continue;
+      }
+      
       CallableAwqlReportDownloader callableDownloader =
-          new CallableAwqlReportDownloader(adWordsSession, accountId, reportQuery, loader);
+          new CallableAwqlReportDownloader(session, reportQuery, loader);
       Future<ReportData> future =
           submitCallableDownloader(executorService, callableDownloader, latch);
-      downloadJobs.add(new DownloadJob(accountId, future));
+      downloadJobs.add(new DownloadJob(clientCustomerId, future));
     }
 
     try {
@@ -145,18 +175,13 @@ public class AwqlReportDownloader extends AlertReportDownloader {
     }
 
     List<ReportData> results = new ArrayList<ReportData>();
-    List<Long> failures = new ArrayList<Long>();
     ReportData report = null;
     for (DownloadJob job : downloadJobs) {
       try {
         report = job.getFuture().get();
-        if (report == null) {
-          failures.add(job.getAccountId());
-        } else {
-          results.add(report);
-        }
+        results.add(report);
       } catch (ExecutionException e) {
-        failures.add(job.getAccountId());
+        failures.add(job.getClientCustomerId());
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         throw new AlertProcessingException(
@@ -167,8 +192,8 @@ public class AwqlReportDownloader extends AlertReportDownloader {
     executorService.shutdown();
     stopwatch.stop();
 
-    LOGGER.info("Downloaded reports for {} accounts in {} seconds.", accountIds.size(),
-        stopwatch.elapsed(TimeUnit.MILLISECONDS) / 1000);
+    LOGGER.info("Downloaded reports for {} accounts in {} seconds.",
+        clientCustomerIds.size(), stopwatch.elapsed(TimeUnit.MILLISECONDS) / 1000);
     LOGGER.info("Result: {} successes, {} failures.", results.size(), failures.size());
 
     if (!failures.isEmpty()) {
@@ -181,18 +206,21 @@ public class AwqlReportDownloader extends AlertReportDownloader {
     return results;
   }
 
+  /**
+   * Build a new {@code ImmutableAdWordsSession} for the given cid.
+   * @param protoSession the prototype of adwords session for building another session
+   * @param cid the client customer id
+   * @return an immutable adwords session for the specified cid
+   */
+  private ImmutableAdWordsSession buildSessionForCid(
+      ImmutableAdWordsSession protoSession, Long cid) throws ValidationException {
+    String cidStr = cid == null ? null : String.valueOf(cid);
+    return protoSession.newBuilder().withClientCustomerId(cidStr).buildImmutable();
+  }
+
   protected Future<ReportData> submitCallableDownloader(ExecutorService executorService,
       CallableAwqlReportDownloader callableDownloader, CountDownLatch latch) {
     callableDownloader.setLatch(latch);
     return executorService.submit(callableDownloader);
-  }
-
-  /**
-   * For Mockito testing.
-   */
-  @VisibleForTesting
-  protected void setAwReportDefinitionDownloader(
-      AwReportDefinitionDownloader reportDefinitionDownloader) {
-    this.reportDefinitionDownloader = reportDefinitionDownloader;
   }
 }

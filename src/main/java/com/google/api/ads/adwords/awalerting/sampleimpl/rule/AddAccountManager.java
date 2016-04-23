@@ -70,13 +70,13 @@ public class AddAccountManager extends AlertRule {
    *
    * As a demonstration, it just randomly choose an account manager.
    *
-   * @param accountId the account ID.
+   * @param clientCustomerId the client customer ID.
    * @return the account manager of the specified account ID.
    */
-  private AccountManager getAccountManager(@SuppressWarnings("unused") String accountId) {
+  private AccountManager getAccountManager(@SuppressWarnings("unused") String clientCustomerId) {
     Preconditions.checkState(accountManagers.size() > 0, "No account managers defined yet.");
     
-    // Look up accountId and returns the corresponding account manager.
+    // Look up clientCustomerId and returns the corresponding account manager.
     // This is for demo only, so it just randomly assigns account to an AM. In reality you may
     // need to look up AM assignment from CRM system.
     int index = random.nextInt(accountManagers.size());
@@ -98,8 +98,8 @@ public class AddAccountManager extends AlertRule {
    */
   @Override
   public void appendReportEntryFields(ReportRow entry) {
-    String accountId = entry.getFieldValue("ExternalCustomerId");
-    AccountManager am = getAccountManager(accountId);
+    String clientCustomerId = entry.getFieldValue("ExternalCustomerId");
+    AccountManager am = getAccountManager(clientCustomerId);
     entry.appendFieldValues(Arrays.asList(am.name, am.email));
   }
 

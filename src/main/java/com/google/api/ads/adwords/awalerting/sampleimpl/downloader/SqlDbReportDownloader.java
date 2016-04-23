@@ -19,7 +19,7 @@ import com.google.api.ads.adwords.awalerting.AlertReportDownloader;
 import com.google.api.ads.adwords.awalerting.report.ReportData;
 import com.google.api.ads.adwords.awalerting.util.DateRange;
 import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionReportType;
-import com.google.api.ads.adwords.lib.client.AdWordsSession;
+import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonArray;
@@ -43,8 +43,7 @@ import java.util.Set;
 
 /**
  * Class to download report data from database (such as aw-reporting's local database).
- * Note that it must have a constructor that takes an AdWordsSession and a JsonObject.
- *
+ * 
  * <p>The JSON config should look like:
  * <pre>
  * {
@@ -117,13 +116,15 @@ public class SqlDbReportDownloader extends AlertReportDownloader {
 
   private JsonObject config;
 
-  public SqlDbReportDownloader(AdWordsSession session, JsonObject config) {
-    super(session, config);
+  public SqlDbReportDownloader(JsonObject config) {
+    super(config);
     this.config = config;
   }
 
   @Override
-  public List<ReportData> downloadReports(Set<Long> accountIds) throws AlertProcessingException {
+  public List<ReportData> downloadReports(
+      ImmutableAdWordsSession protoSession, Set<Long> clientCustomerIds)
+      throws AlertProcessingException {
     Map<String, ReportData> reportDataMap = new HashMap<String, ReportData>();
 
     Connection dbConnection = null;
@@ -151,9 +152,8 @@ public class SqlDbReportDownloader extends AlertReportDownloader {
         indexMapping.put(header.get(i), Integer.valueOf(i));
       }
       
-      Preconditions.checkArgument(
-          indexMapping.containsKey(REPORT_HEADER_NAME_CID),
-          "You must choose AccountId field to generate report data");
+      Preconditions.checkArgument(indexMapping.containsKey(REPORT_HEADER_NAME_CID),
+          "You must choose \"%s\" field to generate report data", REPORT_HEADER_NAME_CID);
       int indexCid = indexMapping.get(REPORT_HEADER_NAME_CID);
 
       while (result.next()) {

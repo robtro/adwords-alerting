@@ -17,6 +17,7 @@ package com.google.api.ads.adwords.awalerting;
 import com.google.api.ads.adwords.awalerting.processor.AlertProcessor;
 import com.google.api.ads.adwords.awalerting.util.DynamicPropertyPlaceholderConfigurer;
 import com.google.api.ads.adwords.awalerting.util.JaxWsProxySelector;
+import com.google.common.base.Joiner;
 import com.google.common.io.Files;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
@@ -26,7 +27,6 @@ import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
@@ -50,7 +50,7 @@ import java.io.InputStreamReader;
 import java.net.ProxySelector;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -68,6 +68,7 @@ import java.util.Set;
  */
 public class AwAlerting {
   private static final Logger LOGGER = LoggerFactory.getLogger(AwAlerting.class);
+  private static final String SEPARATOR = System.getProperty("line.separator");
 
   /**
    * The Spring application context used to get all the beans.
@@ -129,16 +130,16 @@ public class AwAlerting {
     LOGGER.debug("... success.");
 
     LOGGER.info("*** Retrieving account IDs ***");
-    Set<Long> accountIdsSet = null;
+    Set<Long> clientCustomerIdsSet = null;
     if (cmdLine.hasOption("accountIdsFile")) {
       String accountsFileName = cmdLine.getOptionValue("accountIdsFile");
-      accountIdsSet = getAccountsFromFile(accountsFileName);
+      clientCustomerIdsSet = getAccountsFromFile(accountsFileName);
       LOGGER.info("Accounts loaded from file: {}.", accountsFileName);
     }
-    // If no "accountIdsFile" option, it will pass "accountIdsSet" as null and later load all
-    // accounts under the manager account.
+    // If no "accountIdsFile" option, it will pass "clientCustomerIdsSet" as null and later
+    // load all accounts under the manager account.
 
-    processor.generateAlerts(accountIdsSet, alertsConfig);
+    processor.generateAlerts(clientCustomerIdsSet, alertsConfig);
   }
 
   /**
@@ -195,24 +196,28 @@ public class AwAlerting {
    */
   protected static Set<Long> getAccountsFromStream(InputStream stream)
       throws AlertConfigLoadException {
-    Set<Long> accountIdsSet = new HashSet<Long>();
-    LOGGER.debug("Account IDs to be queried:");
-    
+    Set<Long> clientCustomerIdsSet = new LinkedHashSet<Long>();
+
     try {
       BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
       String line;
       while ((line = reader.readLine()) != null) {
-        String accountIdAsString = line.replaceAll("-", "");
-        Long accountId = Long.valueOf(accountIdAsString);
-        accountIdsSet.add(accountId);
-        LOGGER.debug("Account ID: {}", accountId);
+        if (!line.startsWith("#")) {
+          String clientCustomerIdStr = line.replaceAll("-", "");
+          Long clientCustomerId = Long.valueOf(clientCustomerIdStr);
+          clientCustomerIdsSet.add(clientCustomerId);
+        }
       }
       reader.close();
     } catch (IOException e) {
       throw new AlertConfigLoadException("Error reading accounts from stream.", e);
     }
 
-    return accountIdsSet;
+    // Write the client customer IDs into debug log.
+    LOGGER.debug("Client customer IDs specified from input:{}{}",
+          SEPARATOR, Joiner.on(SEPARATOR).join(clientCustomerIdsSet));
+
+    return clientCustomerIdsSet;
   }
   
   /**
@@ -249,8 +254,12 @@ public class AwAlerting {
    */
   private static Options createCommandLineOptions() {
     Options options = new Options();
-    Option help = new Option("help", "print this message");
-    options.addOption(help);
+
+    OptionBuilder.withArgName("help");
+    OptionBuilder.hasArg(false);
+    OptionBuilder.withDescription("print this message");
+    OptionBuilder.isRequired(false);
+    options.addOption(OptionBuilder.create("help"));
 
     OptionBuilder.withArgName("file");
     OptionBuilder.hasArg(true);

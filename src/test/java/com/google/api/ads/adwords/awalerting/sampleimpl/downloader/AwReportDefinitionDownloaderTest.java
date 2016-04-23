@@ -47,9 +47,9 @@ public class AwReportDefinitionDownloaderTest {
 
   @Before
   public void setUp() throws ValidationException {
-    AdWordsSession adWordsSession = TestEntitiesGenerator.getTestAdWordsSession();
-
-    mockedAwReportDefinitionDownloader = new AwReportDefinitionDownloader(adWordsSession);
+    AdWordsSession session = TestEntitiesGenerator.getTestAdWordsSession();
+    
+    mockedAwReportDefinitionDownloader = new AwReportDefinitionDownloader(session);
     mockedAwReportDefinitionDownloader.setRetriesCount(5);
     mockedAwReportDefinitionDownloader.setBackoffInterval(0);
 

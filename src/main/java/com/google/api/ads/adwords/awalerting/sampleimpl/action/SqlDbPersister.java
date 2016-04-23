@@ -173,10 +173,10 @@ public class SqlDbPersister extends AlertAction {
   private void prepareStatement(ReportRow entry) throws SQLException {
     preparedStatement.setTimestamp(1, new Timestamp(new Date().getTime()));
 
-    String accountIdStr = entry.getFieldValue("ExternalCustomerId");
-    if (accountIdStr != null) {
-      long accountId = Long.parseLong(accountIdStr.replaceAll("-", ""));
-      preparedStatement.setLong(2, accountId);
+    String clientCustomerIdStr = entry.getFieldValue("ExternalCustomerId");
+    if (clientCustomerIdStr != null) {
+      long clientCustomerId = Long.parseLong(clientCustomerIdStr.replaceAll("-", ""));
+      preparedStatement.setLong(2, clientCustomerId);
     }
 
     String accountName = entry.getFieldValue("AccountDescriptiveName");

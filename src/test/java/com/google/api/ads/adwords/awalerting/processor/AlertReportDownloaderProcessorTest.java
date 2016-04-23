@@ -25,7 +25,8 @@ import com.google.api.ads.adwords.awalerting.AlertReportDownloader;
 import com.google.api.ads.adwords.awalerting.sampleimpl.downloader.NoOpAlertReportDownloader;
 import com.google.api.ads.adwords.awalerting.util.ConfigTags;
 import com.google.api.ads.adwords.awalerting.util.TestEntitiesGenerator;
-import com.google.api.ads.adwords.lib.client.AdWordsSession;
+import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
+import com.google.api.ads.common.lib.exception.ValidationException;
 import com.google.gson.JsonObject;
 
 import org.junit.Before;
@@ -49,12 +50,11 @@ public class AlertReportDownloaderProcessorTest {
 
   @Before
   public void setUp() throws Exception {
-    AdWordsSession session = TestEntitiesGenerator.getTestAdWordsSession();
     JsonObject alertReportDownloaderConfig = new JsonObject();
     alertReportDownloaderConfig.addProperty(ConfigTags.CLASS_NAME, "NoOpAlertReportDownloader");
 
-    alertReportDownloaderProcessor =
-        new AlertReportDownloaderProcessor(session, alertReportDownloaderConfig);
+    alertReportDownloaderProcessor = new AlertReportDownloaderProcessor(
+        alertReportDownloaderConfig);
 
     MockitoAnnotations.initMocks(this);
   }
@@ -70,11 +70,12 @@ public class AlertReportDownloaderProcessorTest {
   }
 
   @Test
-  public void testDownloadReports() throws AlertProcessingException {
-    Set<Long> accountIds = new HashSet<Long>();
-    alertReportDownloaderProcessor.downloadReports(accountIds);
+  public void testDownloadReports() throws ValidationException, AlertProcessingException {
+    ImmutableAdWordsSession session = TestEntitiesGenerator.getTestAdWordsSession();
+    Set<Long> clientCustomerIds = new HashSet<Long>();
+    alertReportDownloaderProcessor.downloadReports(session, clientCustomerIds);
 
-    verify(alertReportDownloaderProcessor, times(1))
-        .downloadReports(Mockito.<Set<Long>>anyObject());
+    verify(alertReportDownloaderProcessor, times(1)).downloadReports(
+        Mockito.<ImmutableAdWordsSession>anyObject(), Mockito.<Set<Long>>anyObject());
   }
 }

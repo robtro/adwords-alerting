@@ -53,21 +53,18 @@ public class CallableAwqlReportDownloader implements Callable<ReportData> {
 
   private CountDownLatch latch;
 
-  private final AdWordsSession adWordsSession;
-  private final Long accountId;
+  private final AdWordsSession session;
   private final AwqlReportQuery reportQuery;
   private final ReportDataLoader reportDataLoader;
 
   /**
-   * @param adWordsSession the AdWords session used for downloading report
-   * @param accountId the account ID
+   * @param session the adwords session used for downloading report
    * @param reportQuery the AWQL query to download report
    * @param reportDataLoader the loader for generating ReportData from stream
    */
-  public CallableAwqlReportDownloader(AdWordsSession adWordsSession, Long accountId,
-      AwqlReportQuery reportQuery, ReportDataLoader reportDataLoader) {
-    this.adWordsSession = adWordsSession;
-    this.accountId = accountId;
+  public CallableAwqlReportDownloader(
+      AdWordsSession session, AwqlReportQuery reportQuery, ReportDataLoader reportDataLoader) {
+    this.session = session;
     this.reportQuery = reportQuery;
     this.reportDataLoader = reportDataLoader;
   }
@@ -145,9 +142,8 @@ public class CallableAwqlReportDownloader implements Callable<ReportData> {
    * @return the downloaded report data
    */
   protected ReportData downloadAndProcessReport() throws AlertProcessingException {
-    ReportDownloader reportDownloader = new ReportDownloader(adWordsSession);
-    
     try {
+      ReportDownloader reportDownloader = new ReportDownloader(session);
       ReportDownloadResponse reportDownloadResponse =
           reportDownloader.downloadReport(reportQuery.generateAWQL(), DownloadFormat.GZIPPED_CSV);
 
@@ -170,7 +166,7 @@ public class CallableAwqlReportDownloader implements Callable<ReportData> {
 
   /**
    * @param reportStream the downloaded report stream
-   * @return the downloaed report data
+   * @return the downloaded report data
    */
   private ReportData handleReportStreamResult(InputStream reportStream)
       throws AlertProcessingException {
@@ -183,7 +179,7 @@ public class CallableAwqlReportDownloader implements Callable<ReportData> {
       return result;
     } catch (IOException e) {
       LOGGER.error("Error when unzipping and loading the {} of account {}.",
-          reportQuery.getReportType(), accountId);
+          reportQuery.getReportType(), session.getClientCustomerId());
       throw new AlertProcessingException("Failed to load report data from stream.", e);
     }
   }
@@ -192,7 +188,7 @@ public class CallableAwqlReportDownloader implements Callable<ReportData> {
    * Load the report data from downloaded report stream.
    *
    * @param gzipReportStream the downloaded and unzipped stream (CSV format)
-   * @return the downloaed report data
+   * @return the downloaded report data
    */
   private ReportData loadReportData(GZIPInputStream gzipReportStream) throws IOException {
     // Parse the CSV file into report.

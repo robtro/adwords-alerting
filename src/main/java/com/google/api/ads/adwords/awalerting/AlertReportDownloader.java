@@ -15,7 +15,7 @@
 package com.google.api.ads.adwords.awalerting;
 
 import com.google.api.ads.adwords.awalerting.report.ReportData;
-import com.google.api.ads.adwords.lib.client.AdWordsSession;
+import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.gson.JsonObject;
 
 import java.util.List;
@@ -23,24 +23,23 @@ import java.util.Set;
 
 /**
  * This is the abstract class that every alert report downloader should inherit from.
- *
- * <p>Important note: All implementations MUST have a constructor with an AdWordsSession and a
- * JsonConfig parameters, otherwise it will fail to load.
  */
 public abstract class AlertReportDownloader {
   /**
    * Constructor.
    *
-   * @param session the adwords session
    * @param config the JsonObject for the alert report downloader configuration
    */
-  public AlertReportDownloader(AdWordsSession session, JsonObject config) {}
+  public AlertReportDownloader(JsonObject config) {}
   
   /**
    * Download reports and process them to ReportData.
    *
+   * @param protoSession the prototype adwords session used for downloading reports
+   * @param clientCustomerIds the list of client customer IDs for downloading report data
    * @return a collection of ReportData objects
    */
-  public abstract List<ReportData> downloadReports(Set<Long> accountIds)
+  public abstract List<ReportData> downloadReports(
+      ImmutableAdWordsSession protoSession, Set<Long> clientCustomerIds)
       throws AlertProcessingException;
 }

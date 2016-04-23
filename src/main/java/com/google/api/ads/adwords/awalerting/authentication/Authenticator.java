@@ -14,8 +14,9 @@
 
 package com.google.api.ads.adwords.awalerting.authentication;
 
-import com.google.api.ads.adwords.lib.client.AdWordsSession;
+import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.api.ads.common.lib.exception.OAuthException;
+import com.google.api.ads.common.lib.exception.ValidationException;
 import com.google.api.client.auth.oauth2.Credential;
 
 /**
@@ -24,13 +25,13 @@ import com.google.api.client.auth.oauth2.Credential;
 public interface Authenticator {
   /**
    * Authenticates the user against the API(s) depending on the OAuth scope and then returns an
-   * {@link AdWordsSession}.
+   * {@link com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession}.
    *
-   * @param force whether the authentication token must be renewed
-   * @return the session builder after the authentication
+   * @return the immutable adwords session after the authentication
    * @throws OAuthException error on the OAuth process
+   * @throws ValidationException error on the session building process
    */
-  AdWordsSession.Builder authenticate(boolean force) throws OAuthException;
+  ImmutableAdWordsSession authenticate() throws OAuthException, ValidationException;
 
   /**
    * Obtains an OAuth {@link Credential} configured for AwAlerting by doing the OAuth dance.
@@ -43,7 +44,7 @@ public interface Authenticator {
    *    If writing PDF reports to Google Drive, the scope of the token will include both
    *    AdWords and Drive.
    *
-   * @throws OAuthException  error in obtaining a token
+   * @throws OAuthException error in obtaining a token
    */
-  Credential getOAuth2Credential(boolean force) throws OAuthException;
+  Credential getOAuth2Credential() throws OAuthException;
 }

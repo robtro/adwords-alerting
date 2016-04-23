@@ -16,6 +16,8 @@ package com.google.api.ads.adwords.awalerting.authentication;
 
 import com.google.api.ads.adwords.awalerting.util.ConfigTags;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
+import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
+import com.google.api.ads.adwords.lib.client.reporting.ReportingConfiguration;
 import com.google.api.ads.common.lib.auth.GoogleClientSecretsBuilder;
 import com.google.api.ads.common.lib.auth.GoogleClientSecretsBuilder.Api;
 import com.google.api.ads.common.lib.exception.OAuthException;
@@ -78,8 +80,8 @@ public class InstalledOAuth2Authenticator implements Authenticator {
               "User agent must be set and not be the default [%s]", ConfigTags.USER_AGENT_PREFIX),
           "userAgent");
     }
+    
     this.userAgent = ConfigTags.USER_AGENT_PREFIX + "-" + userAgent;
-
     this.developerToken = developerToken;
     this.clientId = clientId;
     this.clientSecret = clientSecret;
@@ -87,16 +89,27 @@ public class InstalledOAuth2Authenticator implements Authenticator {
     this.refreshToken = refreshToken;
   }
 
-  /* (non-Javadoc)
-   * @see com.google.api.ads.adwords.awalerting.authentication.Authenticator#authenticate(boolean)
+  /**
+   * Get an immutable adwords session from the authentication info.
    */
   @Override
-  public AdWordsSession.Builder authenticate(boolean force) throws OAuthException {
+  public ImmutableAdWordsSession authenticate() throws OAuthException, ValidationException {
+    // For easy processing, skip report header and summary (but keep column header).
+    ReportingConfiguration reportingConfig =
+        new ReportingConfiguration.Builder()
+            .skipReportHeader(true)
+            .skipColumnHeader(false)
+            .skipReportSummary(true)
+            .includeZeroImpressions(true)
+            .build();
+    
     return new AdWordsSession.Builder()
-        .withOAuth2Credential(getOAuth2Credential(force))
+        .withOAuth2Credential(getOAuth2Credential())
         .withUserAgent(this.userAgent)
         .withClientCustomerId(this.managerAccountId)
-        .withDeveloperToken(this.developerToken);
+        .withDeveloperToken(this.developerToken)
+        .withReportingConfiguration(reportingConfig)
+        .buildImmutable();
   }
 
   /**
@@ -118,14 +131,13 @@ public class InstalledOAuth2Authenticator implements Authenticator {
    * This method should be invoked for any users for which a refresh token is not known or is
    * invalid.
    *
-   * @param force whether the actual token should be refreshed
    * @return The OAuth2 credential
    * @throws OAuthException an error in obtaining a token
    */
   @Override
-  public Credential getOAuth2Credential(boolean force) throws OAuthException {
+  public Credential getOAuth2Credential() throws OAuthException {
     Credential credential = null;
-    if (Strings.isNullOrEmpty(refreshToken) || force) {
+    if (Strings.isNullOrEmpty(refreshToken)) {
       try {
         LOGGER.debug("Auth Token is uninitialized or forced to regen. Getting a new one.");
         credential = getNewOAuth2Credential();

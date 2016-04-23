@@ -22,15 +22,15 @@ import com.google.api.ads.adwords.awalerting.util.ConfigTags;
 import com.google.api.ads.adwords.awalerting.util.ManagedCustomerDelegate;
 import com.google.api.ads.adwords.jaxws.v201603.mcm.ApiException;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
-import com.google.api.ads.adwords.lib.client.reporting.ReportingConfiguration;
+import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.api.ads.common.lib.exception.OAuthException;
 import com.google.api.ads.common.lib.exception.ValidationException;
+import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,11 +38,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -56,8 +51,7 @@ import java.util.concurrent.TimeUnit;
 @Qualifier("alertProcessor")
 public class AlertProcessor {
   private static final Logger LOGGER = LoggerFactory.getLogger(AlertProcessor.class);
-
-  private static final DateFormat TIMESTAMPFORMAT = new SimpleDateFormat("yyyy-MM-dd-HH_mm");
+  private static final String SEPARATOR = System.getProperty("line.separator");
 
   private static final int DEFAULT_NUM_THREADS = 20;
   private final int numThreads;
@@ -83,105 +77,53 @@ public class AlertProcessor {
   }
 
   /**
-   * Caches the accounts into a temporary file.
-   *
-   * @param accountIdsSet the set with all the accounts
-   */
-  private void cacheAccounts(Set<Long> accountIdsSet) {
-    DateTime now = new DateTime();
-    String nowFormat = TIMESTAMPFORMAT.format(now.toDate());
-
-    try {
-      File tempFile = File.createTempFile(nowFormat + "-accounts-ids", ".txt");
-      LOGGER.info("Cache file created for accounts: {}", tempFile.getAbsolutePath());
-
-      FileWriter writer = new FileWriter(tempFile);
-      for (Long accountId : accountIdsSet) {
-        writer.write(Long.toString(accountId) + "\n");
-      }
-      writer.close();
-      LOGGER.info("All account IDs added to cache file.");
-    } catch (IOException e) {
-      LOGGER.error("Could not create temporary file with the accounts. Accounts won't be cached.");
-    }
-  }
-
-  /**
    * Uses the API to retrieve the managed accounts, and extract their IDs.
    *
    * @param session the adwords session
-   * @param retryOnAuthError whether need to retry when an authentication error happens
-   * @return the account IDs for all the managed accounts
+   * @return the client customer IDs for all the managed accounts
    */
-  public Set<Long> retrieveAccountIds(AdWordsSession session, boolean retryOnAuthError)
-      throws AlertConfigLoadException, AlertProcessingException {
+  private Set<Long> retrieveClientCustomerIds(AdWordsSession session)
+      throws AlertProcessingException {
     try {
-      LOGGER.info("Account IDs being recovered from the API. This may take a while...");
-      return new ManagedCustomerDelegate(session).getAccountIds();
+      LOGGER.info("Client customer IDs being recovered from the API. This may take a while...");
+      return new ManagedCustomerDelegate(session).getClientCustomerIds();
     } catch (ApiException e) {
-      if (retryOnAuthError && e.getMessage().contains("AuthenticationError")) {
-        // Retry authentication once for expired token.
-        LOGGER.info("AuthenticationError, getting a new Token.");
-        resetAdWordsSession(session);
-        return retrieveAccountIds(session, false);
-      } else {
-        throw new AlertProcessingException("API error while getting account IDs.", e);
-      }
-    }
-  }
-  
-  /**
-   * Create an AdWordsSession from authenticator, and throws AlertConfigLoadException on failure.
-   * @return the AdWordsSession object 
-   */
-  private AdWordsSession createAdWordsSession() throws AlertConfigLoadException {
-    try {
-      return authenticator.authenticate(false).build();
-    } catch (OAuthException e) {
-      throw new AlertConfigLoadException("Failed to authenticate AdWordsSession.", e);
-    } catch (ValidationException e) {
-      throw new AlertConfigLoadException("Failed to build AdWordsSession.", e);
-    }
-  }
-  
-  /**
-   * Reset AdWordsSession by renewing the OAuth credential.
-   * @param session the session to reset
-   */
-  private void resetAdWordsSession(AdWordsSession session) throws AlertConfigLoadException {
-    try {
-      session.setOAuth2Credential(authenticator.getOAuth2Credential(true));
-    } catch (OAuthException e) {
-      throw new AlertConfigLoadException("Failed to reset AdwordsSession.", e);
+      throw new AlertProcessingException(
+          "Encountered API error while getting client customer IDs.", e);
     }
   }
 
   /**
    * Generate all the alerts for the given account IDs under the manager account.
    *
-   * @param accountIds the account IDs
+   * @param clientCustomerIds the client customer IDs
    * @param alertsConfig the JSON config of the alerts
    */
-  public void generateAlerts(Set<Long> accountIds, JsonObject alertsConfig)
+  public void generateAlerts(Set<Long> clientCustomerIds, JsonObject alertsConfig)
       throws AlertConfigLoadException, AlertProcessingException {
     Stopwatch stopwatch = Stopwatch.createStarted();
     
-    AdWordsSession session = createAdWordsSession();
-    
-    if (accountIds == null) {
-      accountIds = retrieveAccountIds(session, true);
+    ImmutableAdWordsSession session = null;
+    try {
+      session = authenticator.authenticate();
+    } catch (OAuthException e) {
+      throw new AlertConfigLoadException("Failed to authenticate AdWordsSession.", e);
+    } catch (ValidationException e) {
+      throw new AlertConfigLoadException("Failed to build AdWordsSession.", e);
     }
-    this.cacheAccounts(accountIds);
-
-    // For easy processing, skip report header and summary (but keep column names).
-    ReportingConfiguration reportingConfig =
-        new ReportingConfiguration.Builder().skipReportHeader(true).skipReportSummary(true).build();
-    session.setReportingConfiguration(reportingConfig);
     
+    if (clientCustomerIds == null) {
+      clientCustomerIds = retrieveClientCustomerIds(session);
+
+      // Write the client customer IDs into debug log.
+      LOGGER.debug("Client customer IDs retrieved:{}{}",
+          SEPARATOR, Joiner.on(SEPARATOR).join(clientCustomerIds));
+    }
+
     int count = 0;
     for (JsonElement alertConfig : alertsConfig.getAsJsonArray(ConfigTags.ALERTS)) {
       count++;
-      this.processAlert(accountIds, session, alertConfig.getAsJsonObject(), count);
+      processAlert(clientCustomerIds, session, alertConfig.getAsJsonObject(), count);
     }
 
     stopwatch.stop();
@@ -193,16 +135,20 @@ public class AlertProcessor {
   /**
    * Process one alert for the given account IDs under the manager account.
    *
-   * @param accountIds the account IDs
-   * @param session the adwords session
+   * @param clientCustomerIds the client customer IDs
+   * @param protoSession the prototype adwords session used for downloading reports
    * @param alertConfig the JSON config of the alert
    * @param count the sequence number of current alert
    */
-  protected void processAlert(Set<Long> accountIds, AdWordsSession session,
-      JsonObject alertConfig, int count) throws AlertConfigLoadException, AlertProcessingException {
+  protected void processAlert(
+      Set<Long> clientCustomerIds,
+      ImmutableAdWordsSession protoSession,
+      JsonObject alertConfig,
+      int count)
+      throws AlertConfigLoadException, AlertProcessingException {
     String alertName = alertConfig.get(ConfigTags.ALERT_NAME).getAsString();
-    LOGGER.info("*** Generating alert #{} (name: \"{}\") for {} accounts ***", count, alertName,
-        accountIds.size());
+    LOGGER.info("*** Generating alert #{} (name: \"{}\") for {} accounts ***",
+        count, alertName, clientCustomerIds.size());
 
     JsonObject downloaderConfig = alertConfig.getAsJsonObject(ConfigTags.REPORT_DOWNLOADER);
     JsonArray rulesConfig = alertConfig.getAsJsonArray(ConfigTags.RULES); // optional
@@ -210,26 +156,28 @@ public class AlertProcessor {
     JsonArray actionsConfig = alertConfig.getAsJsonArray(ConfigTags.ACTIONS);
 
     // Generate AWQL report query and download report data for all accounts under manager account.
-    List<ReportData> reports = this.downloadReports(session, accountIds, downloaderConfig);
+    List<ReportData> reports = downloadReports(protoSession, clientCustomerIds, downloaderConfig);
     printReports(reports, "*** Downloaded report data:");
 
     // Process the downloaded reports
-    this.processReports(reports, rulesConfig, alertMessage, actionsConfig);
+    processReports(reports, rulesConfig, alertMessage, actionsConfig);
   }
 
   /**
    * Download report files for the given account IDs under the manager account.
    *
-   * @param session the adwords session
-   * @param accountIds the account IDs
+   * @param protoSession the prototype adwords session used for downloading reports
+   * @param clientCustomerIds the client customer IDs
    * @param downloaderConfig the JSON config for this downloader
    */
   protected List<ReportData> downloadReports(
-      AdWordsSession session, Set<Long> accountIds, JsonObject downloaderConfig)
+      ImmutableAdWordsSession protoSession,
+      Set<Long> clientCustomerIds,
+      JsonObject downloaderConfig)
       throws AlertConfigLoadException, AlertProcessingException {
     AlertReportDownloaderProcessor reportDownloadProcessor =
-        new AlertReportDownloaderProcessor(session, downloaderConfig);
-    return reportDownloadProcessor.downloadReports(accountIds);
+        new AlertReportDownloaderProcessor(downloaderConfig);
+    return reportDownloadProcessor.downloadReports(protoSession, clientCustomerIds);
   }
 
   /**

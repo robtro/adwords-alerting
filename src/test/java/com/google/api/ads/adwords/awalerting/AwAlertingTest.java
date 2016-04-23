@@ -15,6 +15,7 @@
 package com.google.api.ads.adwords.awalerting;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.google.api.ads.adwords.awalerting.util.TestEntitiesGenerator;
@@ -35,16 +36,17 @@ public class AwAlertingTest {
    */
   @Test
   public void testAddAccountFromFile() throws AlertConfigLoadException {    
-    Set<Long> accountIdsSet =
+    Set<Long> clientCustomerIds =
         AwAlerting.getAccountsFromStream(TestEntitiesGenerator.getTestAccountsStream());
-    assertEquals("Verify number of account IDs loaded from file.", accountIdsSet.size(), 6);
+    assertEquals(
+        "Verify number of client customer IDs loaded from file.", clientCustomerIds.size(), 5);
 
     final String errorMsg = "Verify the specific acocunt ID is loaded.";
-    assertTrue(errorMsg, accountIdsSet.contains(1235431234L));
-    assertTrue(errorMsg, accountIdsSet.contains(3492871722L));
-    assertTrue(errorMsg, accountIdsSet.contains(5731985421L));
-    assertTrue(errorMsg, accountIdsSet.contains(3821071791L));
-    assertTrue(errorMsg, accountIdsSet.contains(5471928097L));
-    assertTrue(errorMsg, accountIdsSet.contains(5471928098L));
+    assertTrue(errorMsg, clientCustomerIds.contains(1235431234L));
+    assertTrue(errorMsg, clientCustomerIds.contains(3492871722L));
+    assertTrue(errorMsg, clientCustomerIds.contains(5731985421L));
+    assertTrue(errorMsg, clientCustomerIds.contains(3821071791L));
+    assertTrue(errorMsg, clientCustomerIds.contains(5471928097L));
+    assertFalse(errorMsg, clientCustomerIds.contains(5471928098L));
   }
 }

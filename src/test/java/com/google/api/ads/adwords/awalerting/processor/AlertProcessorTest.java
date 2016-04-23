@@ -21,8 +21,9 @@ import com.google.api.ads.adwords.awalerting.authentication.Authenticator;
 import com.google.api.ads.adwords.awalerting.report.ReportData;
 import com.google.api.ads.adwords.awalerting.util.ConfigTags;
 import com.google.api.ads.adwords.awalerting.util.TestEntitiesGenerator;
-import com.google.api.ads.adwords.lib.client.AdWordsSession;
+import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.api.ads.common.lib.exception.OAuthException;
+import com.google.api.ads.common.lib.exception.ValidationException;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -59,14 +60,14 @@ public class AlertProcessorTest {
   ArgumentCaptor<List<ReportData>> reportsCaptor;
   
   @Before
-  public void setUp() throws OAuthException {
+  public void setUp() throws OAuthException, ValidationException {
     alertProcessor = new AlertProcessor(10);
 
     MockitoAnnotations.initMocks(this);
 
     // Mocking the Authentication because in OAuth2 we are force to call buildOAuth2Credentials
-    AdWordsSession.Builder builder = TestEntitiesGenerator.getTestAdWordsSessionBuilder();
-    Mockito.doReturn(builder).when(authenticator).authenticate(Mockito.anyBoolean());
+    ImmutableAdWordsSession session = TestEntitiesGenerator.getTestAdWordsSession();
+    Mockito.doReturn(session).when(authenticator).authenticate();
 
     alertProcessor.setAuthentication(authenticator);
   }
@@ -88,12 +89,12 @@ public class AlertProcessorTest {
     
     verify(alertProcessor, times(numberOfAlerts)).processAlert(
         Mockito.<Set<Long>>anyObject(),
-        Mockito.<AdWordsSession>anyObject(),
+        Mockito.<ImmutableAdWordsSession>anyObject(),
         Mockito.<JsonObject>anyObject(),
         Mockito.anyInt());
     
     verify(alertProcessor, times(numberOfAlerts)).downloadReports(
-        Mockito.<AdWordsSession>anyObject(),
+        Mockito.<ImmutableAdWordsSession>anyObject(),
         Mockito.<Set<Long>>anyObject(),
         Mockito.<JsonObject>anyObject());
     

@@ -54,13 +54,13 @@ public class CallableAwqlReportDownloaderTest {
 
   @Before
   public void setUp() throws ValidationException {
-    AdWordsSession adWordsSession = TestEntitiesGenerator.getTestAdWordsSession();
+    AdWordsSession session = TestEntitiesGenerator.getTestAdWordsSession();
     JsonObject jsonConfig = TestEntitiesGenerator.getTestReportQueryConfig();
     AwqlReportQuery reportQuery = new AwqlReportQuery(jsonConfig);
     ReportDataLoader reportDataLoader = TestEntitiesGenerator.getTestReportDataLoader();
 
     mockedRunnableAwqlReportDownloader =
-        new CallableAwqlReportDownloader(adWordsSession, 1L, reportQuery, reportDataLoader);
+        new CallableAwqlReportDownloader(session, reportQuery, reportDataLoader);
     mockedRunnableAwqlReportDownloader.setRetriesCount(5);
     mockedRunnableAwqlReportDownloader.setBackoffInterval(0);
 

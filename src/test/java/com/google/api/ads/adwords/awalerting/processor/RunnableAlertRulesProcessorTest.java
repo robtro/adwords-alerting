@@ -128,7 +128,6 @@ public class RunnableAlertRulesProcessorTest {
     int numberOfMatches = ALERT_MESSAGE_PLACEHOLDERS_COUNT * NUMBER_OF_ENTRIES_IN_REPORT;
     verify(mockedReport, times(1)).appendNewField(Mockito.anyString());
     verify(mockedReport, times(1)).getRows();
-    verify(mockedReport, times(numberOfMatches)).getIndexMapping();
     verify(mockedReport, times(numberOfMatches)).getFieldIndex(Mockito.anyString());
   }
   
