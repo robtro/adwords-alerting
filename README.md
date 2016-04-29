@@ -2,7 +2,7 @@
 
 ## Overview
 
-Alerting Framework on AdWords is an open source Java framework for large-
+Alerting Framework on AdWords is an open source Java framework for large
 scale AdWords API alerting. It's based on the [Java AdWords API client
 library] (https://github.com/googleads/googleads-java-lib). This framework
 is capable of downloading AdWords report data and combining with other
@@ -21,7 +21,13 @@ You will need Java, Maven and MySQL installed before configuring the project.
 
 ### Build the project using Maven
 
-Alerting Framework on AdWords can be compiled using Maven by executing the
+You can clone the git repository into a local folder by executing the following
+command:
+```
+$ git clone https://github.com/googleads/adwords-alerting
+```
+
+And compile the Alerting Framework on AdWords using Maven by executing the
 following command:
 ```
 $ mvn compile dependency:copy-dependencies package

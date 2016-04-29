@@ -33,6 +33,13 @@
         <directory>src/main/resources</directory>
       </resource>
     </resources>
+    <testResources>
+      <testResource>
+        <targetPath>com/google/api/ads/adwords/awalerting/util/resources</targetPath>
+        <filtering>false</filtering>
+        <directory>src/test/java/com/google/api/ads/adwords/awalerting/util/resources</directory>
+      </testResource>
+    </testResources>
     <pluginManagement>
       <plugins>
         <plugin>
