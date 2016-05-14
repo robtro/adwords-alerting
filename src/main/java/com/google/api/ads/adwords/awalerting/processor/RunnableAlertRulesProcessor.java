@@ -140,7 +140,8 @@ public class RunnableAlertRulesProcessor implements Runnable {
 
         String fieldName = curMatch.substring(1, length - 1);
         int index = report.getFieldIndex(fieldName);
-        alertMessageMatcher.appendReplacement(sb, row.get(index));
+        String replacement = Matcher.quoteReplacement(row.get(index));
+        alertMessageMatcher.appendReplacement(sb, replacement);
       }
       alertMessageMatcher.appendTail(sb);
       row.add(sb.toString());
