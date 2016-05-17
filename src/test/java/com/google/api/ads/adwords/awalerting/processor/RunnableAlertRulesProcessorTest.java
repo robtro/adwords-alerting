@@ -86,7 +86,7 @@ public class RunnableAlertRulesProcessorTest {
     // For invalid alert rules processing test
     invalidAlertRule = Mockito.spy(TestEntitiesGenerator.getNoOpAlertRule());
     List<String> invalidHeaderField = Collections.singletonList(ConfigTags.ALERT_MESSAGE);
-    Mockito.doReturn(invalidHeaderField).when(invalidAlertRule).newReportHeaderFields();
+    Mockito.doReturn(invalidHeaderField).when(invalidAlertRule).newReportColumns();
 
     invalidAlertRulesProcessor = Mockito.spy(new RunnableAlertRulesProcessor(
         report, Collections.singletonList(invalidAlertRule), alertMessage));
@@ -105,9 +105,9 @@ public class RunnableAlertRulesProcessorTest {
         .appendAlertMessages(Mockito.<ReportData>anyObject());
 
     for (int i = 0; i < NUMBER_OF_RULES; ++i) {
-      verify(mockedAlertRules.get(i), times(1)).newReportHeaderFields();
+      verify(mockedAlertRules.get(i), times(1)).newReportColumns();
       verify(mockedAlertRules.get(i), times(NUMBER_OF_ENTRIES_IN_REPORT))
-          .appendReportEntryFields(Mockito.<ReportRow>anyObject());
+          .appendReportEntryValues(Mockito.<ReportRow>anyObject());
       verify(mockedAlertRules.get(i), times(NUMBER_OF_ENTRIES_IN_REPORT))
           .shouldRemoveReportEntry(Mockito.<ReportRow>anyObject());
     }
@@ -126,9 +126,9 @@ public class RunnableAlertRulesProcessorTest {
         .appendAlertMessages(Mockito.<ReportData>anyObject());
 
     int numberOfMatches = ALERT_MESSAGE_PLACEHOLDERS_COUNT * NUMBER_OF_ENTRIES_IN_REPORT;
-    verify(mockedReport, times(1)).appendNewField(Mockito.anyString());
+    verify(mockedReport, times(1)).appendNewColumn(Mockito.anyString());
     verify(mockedReport, times(1)).getRows();
-    verify(mockedReport, times(numberOfMatches)).getFieldIndex(Mockito.anyString());
+    verify(mockedReport, times(numberOfMatches)).getColumnIndex(Mockito.anyString());
   }
   
   @Test

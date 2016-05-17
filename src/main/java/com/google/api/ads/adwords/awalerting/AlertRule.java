@@ -36,14 +36,14 @@ public abstract class AlertRule {
   /**
    * Return new column names that the alert rule will extend in the report.
    */
-  public abstract List<String> newReportHeaderFields();
+  public abstract List<String> newReportColumns();
 
   /**
    * Append new field values into the report entry.
    *
-   * @param entry the report entry to append new field values
+   * @param entry the report entry to append new values
    */
-  public abstract void appendReportEntryFields(ReportRow entry);
+  public abstract void appendReportEntryValues(ReportRow entry);
 
   /**
    * Check whether a report entry should be removed from result alerts.

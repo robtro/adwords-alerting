@@ -37,12 +37,12 @@ public class NoOpAlertRule extends AlertRule {
   }
 
   @Override
-  public List<String> newReportHeaderFields() {
+  public List<String> newReportColumns() {
     return null;
   }
 
   @Override
-  public void appendReportEntryFields(ReportRow entry) {}
+  public void appendReportEntryValues(ReportRow entry) {}
 
   @Override
   public boolean shouldRemoveReportEntry(ReportRow entry) {

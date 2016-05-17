@@ -87,17 +87,17 @@ public class AddAccountManager extends AlertRule {
    * Extend new columns names for account manager in the report.
    */
   @Override
-  public List<String> newReportHeaderFields() {
+  public List<String> newReportColumns() {
     return Arrays.asList("AccountManagerName", "AccountManagerEmail");
   }
 
   /**
    * Append new field values for account manager into the report entry.
    *
-   * @param entry the report entry to append new field values.
+   * @param entry the report entry to append new values.
    */
   @Override
-  public void appendReportEntryFields(ReportRow entry) {
+  public void appendReportEntryValues(ReportRow entry) {
     String clientCustomerId = entry.getFieldValue("ExternalCustomerId");
     AccountManager am = getAccountManager(clientCustomerId);
     entry.appendFieldValues(Arrays.asList(am.name, am.email));

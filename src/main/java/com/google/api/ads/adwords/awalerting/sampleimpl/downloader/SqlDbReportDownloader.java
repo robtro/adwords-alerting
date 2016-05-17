@@ -43,9 +43,9 @@ import java.util.Set;
 
 /**
  * Class to download report data from database (such as aw-reporting's local database).
- * 
- * <p>The JSON config should look like:
- * <pre>
+ *
+ * <p>
+ * The JSON config should look like: <pre>
  * {
  *   "ClassName": "SqlDbReportDownloader",
  *   "Database": {
@@ -59,27 +59,27 @@ import java.util.Set;
  *     "ColumnMappings": [
  *       {
  *         "DatabaseColumnName": "ACCOUNT_ID",
- *         "ReportDataHeaderName": "ExternalCustomerId"
+ *         "ReportDataColumnName": "ExternalCustomerId"
  *       },
  *       {
  *         "DatabaseColumnName": "ACCOUNT_DESCRIPTIVE_NAME",
- *         "ReportDataHeaderName": "AccountDescriptiveName"
+ *         "ReportDataColumnName": "AccountDescriptiveName"
  *       },
  *       {
  *         "DatabaseColumnName": "KEYWORD_ID",
- *         "ReportDataHeaderName": "Id"
+ *         "ReportDataColumnName": "Id"
  *       },
  *       {
  *         "DatabaseColumnName": "CRITERIA",
- *         "ReportDataHeaderName": "Criteria"
+ *         "ReportDataColumnName": "Criteria"
  *       },
  *       {
  *         "DatabaseColumnName": "IMPRESSIONS",
- *         "ReportDataHeaderName": "Impressions"
+ *         "ReportDataColumnName": "Impressions"
  *       },
  *       {
  *         "DatabaseColumnName": "CTR",
- *         "ReportDataHeaderName": "Ctr"
+ *         "ReportDataColumnName": "Ctr"
  *       }
  *     ],
  *     "Conditions": "Impressions > 100 AND Ctr < 0.05",
@@ -104,7 +104,7 @@ public class SqlDbReportDownloader extends AlertReportDownloader {
   private static final String TABLE_TAG = "Table";
   private static final String COLUMN_MAPPINGS_TAG = "ColumnMappings";
   private static final String DATABASE_COLUMN_NAME_TAG = "DatabaseColumnName";
-  private static final String REPORT_HEADER_NAME_TAG = "ReportDataHeaderName";
+  private static final String REPORT_COLUMN_NAME_TAG = "ReportDataColumnName";
   private static final String CONDITIONS_TAG = "Conditions";
   private static final String DATE_RANGE_TAG = "DateRange";
 
@@ -112,7 +112,7 @@ public class SqlDbReportDownloader extends AlertReportDownloader {
 
   private static final String DATE_COLUMN_NAME = "Day";
   private static final String DATA_RANGE_CONDITION_FORMAT = "DATE(%s) BETWEEN %s AND %s";
-  private static final String REPORT_HEADER_NAME_CID = "ExternalCustomerId";
+  private static final String EXTERNAL_CUSTOMER_ID_REPORT_COLUMN_NAME = "ExternalCustomerId";
 
   private JsonObject config;
 
@@ -128,47 +128,45 @@ public class SqlDbReportDownloader extends AlertReportDownloader {
     Map<String, ReportData> reportDataMap = new HashMap<String, ReportData>();
 
     Connection dbConnection = null;
-    Statement statement = null;
-    ResultSet result = null;
+    Statement dbStatement = null;
+    ResultSet dbResult = null;
 
     try {
       dbConnection = getDbConnection();
       LOGGER.info(
           "Downloading report data from SQL server: {}", dbConnection.getMetaData().getURL());
 
-      List<String> header = new ArrayList<String>();
-      String sqlQuery = getSqlQueryWithHeader(header);
+      List<String> reportColumnNames = new ArrayList<String>();
+      String sqlQuery = getSqlQueryWithReportColumnNames(reportColumnNames);
       LOGGER.info("Using the following query: {}", sqlQuery);
 
-      statement = dbConnection.createStatement();
-      result = statement.executeQuery(sqlQuery);
+      dbStatement = dbConnection.createStatement();
+      dbResult = dbStatement.executeQuery(sqlQuery);
 
-      int columns = header.size();
+      int columns = reportColumnNames.size();
       // SQL query and ResultSet should match in # of columns
-      Preconditions.checkState(columns == result.getMetaData().getColumnCount());
+      Preconditions.checkState(columns == dbResult.getMetaData().getColumnCount());
 
-      Map<String, Integer> indexMapping = new HashMap<String, Integer>(columns);
-      for (int i = 0; i < columns; i++) {
-        indexMapping.put(header.get(i), Integer.valueOf(i));
-      }
-      
-      Preconditions.checkArgument(indexMapping.containsKey(REPORT_HEADER_NAME_CID),
-          "You must choose \"%s\" field to generate report data", REPORT_HEADER_NAME_CID);
-      int indexCid = indexMapping.get(REPORT_HEADER_NAME_CID);
+      int customerIdColumnIndex =
+          reportColumnNames.indexOf(EXTERNAL_CUSTOMER_ID_REPORT_COLUMN_NAME);
+      Preconditions.checkArgument(
+          customerIdColumnIndex >= 0,
+          "You must choose \"%s\" field to generate report data",
+          EXTERNAL_CUSTOMER_ID_REPORT_COLUMN_NAME);
 
-      while (result.next()) {
+      while (dbResult.next()) {
         List<String> row = new ArrayList<String>(columns);
         for (int columnCount = 1; columnCount <= columns; columnCount++) {
-          row.add(result.getString(columnCount));
+          row.add(dbResult.getString(columnCount));
         }
-       
-        String cid = row.get(indexCid);
-        ReportData reportData = reportDataMap.get(cid);
+
+        String customerId = row.get(customerIdColumnIndex);
+        ReportData reportData = reportDataMap.get(customerId);
         if (reportData == null) {
           // ReportDefinitionReportType doesn't really matter (just for some printing purpose),
           // so don't bother find it from database table name.
-          reportData = new ReportData(ReportDefinitionReportType.UNKNOWN, header, indexMapping);
-          reportDataMap.put(cid, reportData);
+          reportData = new ReportData(ReportDefinitionReportType.UNKNOWN, reportColumnNames);
+          reportDataMap.put(customerId, reportData);
         }
         reportData.addRow(row);
       }
@@ -176,17 +174,17 @@ public class SqlDbReportDownloader extends AlertReportDownloader {
       throw new AlertProcessingException("Failed to query database!", e);
     } finally {
       // Close all resources
-      if (result != null) {
+      if (dbResult != null) {
         try {
-          result.close();
+          dbResult.close();
         } catch (SQLException e) {
           // do nothing
         }
       }
 
-      if (statement != null) {
+      if (dbStatement != null) {
         try {
-          statement.close();
+          dbStatement.close();
         } catch (SQLException e) {
           // do nothing
         }
@@ -252,11 +250,12 @@ public class SqlDbReportDownloader extends AlertReportDownloader {
   }
 
   /**
-   * Get SQL query string according to config, and build header list.
-   * @param header an empty list of string to be filled with report header
+   * Get SQL query string according to config, and build column names list.
+   *
+   * @param reportColumnNames an empty list of string to be filled with column names
    * @return the sql query string
    */
-  private String getSqlQueryWithHeader(List<String> header) {
+  private String getSqlQueryWithReportColumnNames(List<String> reportColumnNames) {
     Preconditions.checkArgument(
         config.has(REPORT_QUERY_TAG), "Missing compulsory property: %s", REPORT_QUERY_TAG);
     JsonObject queryConfig = config.get(REPORT_QUERY_TAG).getAsJsonObject();
@@ -271,11 +270,11 @@ public class SqlDbReportDownloader extends AlertReportDownloader {
         COLUMN_MAPPINGS_TAG);
     JsonArray columnMappings = queryConfig.getAsJsonArray(COLUMN_MAPPINGS_TAG);
     // Use LinkedHashMap to preserve order (SQL query and result parsing must have matched order).
-    Map<String, String> fields = new LinkedHashMap<String, String>(columnMappings.size());
+    Map<String, String> fieldsMapping = new LinkedHashMap<String, String>(columnMappings.size());
 
-    // Process database column -> report header mapping
-    header.clear();
-    String dbColumnName, reportHeaderName;
+    // Process database column -> report column mapping
+    reportColumnNames.clear();
+    String dbColumnName, reportColumnName;
     for (JsonElement columnMapping : columnMappings) {
       JsonObject mapping = columnMapping.getAsJsonObject();
       Preconditions.checkArgument(
@@ -285,18 +284,18 @@ public class SqlDbReportDownloader extends AlertReportDownloader {
           COLUMN_MAPPINGS_TAG,
           DATABASE_COLUMN_NAME_TAG);
       Preconditions.checkArgument(
-          mapping.has(REPORT_HEADER_NAME_TAG),
+          mapping.has(REPORT_COLUMN_NAME_TAG),
           "Missing compulsory property: %s - %s - %s",
           REPORT_QUERY_TAG,
           COLUMN_MAPPINGS_TAG,
-          REPORT_HEADER_NAME_TAG);
+          REPORT_COLUMN_NAME_TAG);
       dbColumnName = mapping.get(DATABASE_COLUMN_NAME_TAG).getAsString();
-      reportHeaderName = mapping.get(REPORT_HEADER_NAME_TAG).getAsString();
-      fields.put(dbColumnName, reportHeaderName);
-      header.add(reportHeaderName);
+      reportColumnName = mapping.get(REPORT_COLUMN_NAME_TAG).getAsString();
+      fieldsMapping.put(dbColumnName, reportColumnName);
+      reportColumnNames.add(reportColumnName);
     }
 
-    sqlQueryBuilder.append(Joiner.on(", ").withKeyValueSeparator(" AS ").join(fields));
+    sqlQueryBuilder.append(Joiner.on(", ").withKeyValueSeparator(" AS ").join(fieldsMapping));
 
     Preconditions.checkArgument(
         queryConfig.has(TABLE_TAG),

@@ -24,7 +24,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,7 +32,11 @@ import java.util.Map;
  */
 public class ReportDataLoader {
   private final ReportDefinitionReportType reportType;
-  private final Map<String, String> fieldsMapping;  // the (displayFiledName -> filedName) mapping.
+  
+  /**
+   * The (displayFieldName -> fieldName) mapping.
+   */
+  private final Map<String, String> fieldsMapping;
   
   public ReportDataLoader(
       ReportDefinitionReportType reportType, Map<String, String> fieldsMapping) {
@@ -54,9 +57,6 @@ public class ReportDataLoader {
     List<String[]> rowsArray = csvReader.readAll();
     csvReader.close();
     
-    int columns = headerArray.length;
-    List<String> header = new ArrayList<String>(columns);
-    
     int rowsCount = rowsArray.size();
     List<List<String>> rows = new ArrayList<List<String>>(rowsCount);
     for (int i = 0; i < rowsCount; ++i) {
@@ -65,14 +65,14 @@ public class ReportDataLoader {
       rows.add(row);
     }
 
-    Map<String, Integer> indexMapping = new HashMap<String, Integer>(columns);
-    for (int i = 0; i < columns; ++i) {
+    int columns = headerArray.length;
+    List<String> columnNames = new ArrayList<String>(columns);
+    for (int i = 0; i < columns; i++) {
       String fieldName = fieldsMapping.get(headerArray[i]);
       Preconditions.checkNotNull(fieldName, "Unknown field name: %s.", fieldName);
-      header.add(fieldName);
-      indexMapping.put(fieldName, Integer.valueOf(i));
+      columnNames.add(fieldName);
     }
     
-    return new ReportData(reportType, header, rows, indexMapping);
+    return new ReportData(reportType, columnNames, rows);
   }
 }

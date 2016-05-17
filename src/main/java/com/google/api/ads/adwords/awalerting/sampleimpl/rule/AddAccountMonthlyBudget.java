@@ -48,7 +48,7 @@ public class AddAccountMonthlyBudget extends AlertRule {
    * Extend new columns name for account monthly budget in the report.
    */
   @Override
-  public List<String> newReportHeaderFields() {
+  public List<String> newReportColumns() {
     return Collections.singletonList("AccountMonthlyBudget");
   }
 
@@ -58,10 +58,10 @@ public class AddAccountMonthlyBudget extends AlertRule {
    * As a demonstration, it just randomly chooses a monthly budget between 0 / 50 /100 dollars,
    * with 0 meaning unlimited.
    *
-   * @param entry the report entry to append new field values.
+   * @param entry the report entry to append new values.
    */
   @Override
-  public void appendReportEntryFields(ReportRow entry) {
+  public void appendReportEntryValues(ReportRow entry) {
     // Randomly choose a monthly budget of 0, 50 or 100 dollars per month.
     int multiplier = random.nextInt(3);
     long budget = multiplier * 50; 

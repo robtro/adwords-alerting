@@ -19,6 +19,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,47 +28,39 @@ import java.util.Map;
  */
 public class ReportData {
   private static final String SEPARATOR = System.getProperty("line.separator");
-  
+
   private final ReportDefinitionReportType reportType;
 
   // use List instead of native array[], since report data will be enriched.
-  private final List<String> header;
   private final List<List<String>> rows;
 
-  // Field name -> row index (0-based) mapping.
+  // Column name -> row index (0-based) mapping.
   private final Map<String, Integer> indexMapping;
-  
+
+  /**
+   * @param reportType the report type
+   * @param columnNames the column names of the report
+   * @param rows the 2 dimensional list of values in the report
+   */
   public ReportData(
-      ReportDefinitionReportType reportType,
-      List<String> header,
-      List<List<String>> rows,
-      Map<String, Integer> indexMapping) {
-    Preconditions.checkArgument(
-        indexMapping.size() == header.size(),
-        "Report indexMapping and header should have same size.");
-    
+      ReportDefinitionReportType reportType, List<String> columnNames, List<List<String>> rows) {
     this.reportType = reportType;
-    this.header = header;
     this.rows = rows;
-    this.indexMapping = indexMapping;
-  }
-  
-  public ReportData(
-      ReportDefinitionReportType reportType,
-      List<String> header,
-      Map<String, Integer> indexMapping) {
-    Preconditions.checkArgument(
-        indexMapping.size() == header.size(),
-        "Report indexMapping and header should have same size.");
-    
-    this.reportType = reportType;
-    this.header = header;
-    this.rows = new ArrayList<List<String>>();
-    this.indexMapping = indexMapping;
+
+    // Use LinkedHashMap to preserve ordering of keys.
+    int columns = columnNames.size();
+    this.indexMapping = new LinkedHashMap<String, Integer>(columns);
+    for (int i = 0; i < columns; i++) {
+      this.indexMapping.put(columnNames.get(i), Integer.valueOf(i));
+    }
   }
 
-  public List<String> getHeader() {
-    return header;
+  public ReportData(ReportDefinitionReportType reportType, List<String> columnNames) {
+    this(reportType, columnNames, new ArrayList<List<String>>());
+  }
+  
+  public List<String> getColumnNames() {
+    return new ArrayList<String>(indexMapping.keySet());
   }
 
   public List<List<String>> getRows() {
@@ -82,17 +75,18 @@ public class ReportData {
   public List<String> getRow(int index) {
     return rows.get(index);
   }
-  
+
   /**
    * Add one row into the rows list.
+   *
    * @param row the row to be added
    */
   public void addRow(List<String> row) {
     rows.add(row);
   }
-  
+
   /**
-   * Get the mapping of field name -> row index (0-based).
+   * Get the mapping of column name -> row index (0-based).
    */
   public Map<String, Integer> getIndexMapping() {
     return indexMapping;
@@ -103,27 +97,28 @@ public class ReportData {
    *
    * @param columnName the column name for looking up its 0-based index
    */
-  public int getFieldIndex(String columnName) {
-    Preconditions.checkArgument(indexMapping.containsKey(columnName),
-        "The specified column name is not available in the report: %s", columnName);
+  public int getColumnIndex(String columnName) {
+    Preconditions.checkArgument(
+        indexMapping.containsKey(columnName),
+        "The specified column name is not available in the report: %s",
+        columnName);
     return indexMapping.get(columnName).intValue();
   }
 
   /**
    * Append a new column in the report.
    *
-   * @param fieldName the name of the new field
-   * @throws IllegalArgumentException if the specified field name already exists in report header
+   * @param columnName the name of the new column
+   * @throws IllegalArgumentException if the specified column name already exists in report
    */
-  public void appendNewField(String fieldName) {
+  public void appendNewColumn(String columnName) {
     Preconditions.checkArgument(
-        !indexMapping.containsKey(fieldName),
-        "Cannot append new field: the field name \"%s\" already exists in the report header!",
-        fieldName);
-    
-    int newIndex = header.size();
-    header.add(fieldName);
-    indexMapping.put(fieldName, Integer.valueOf(newIndex));
+        !indexMapping.containsKey(columnName),
+        "Cannot append new column: the column name \"%s\" already exists in the report!",
+        columnName);
+
+    int newIndex = indexMapping.size();
+    indexMapping.put(columnName, Integer.valueOf(newIndex));
   }
 
   public ReportDefinitionReportType getReportType() {
@@ -137,15 +132,15 @@ public class ReportData {
   public String toString() {
     StringBuilder builder = new StringBuilder();
     Joiner joiner = Joiner.on(',');
-    
+
     builder.append(reportType.value()).append(":").append(SEPARATOR);
-    builder.append("Header:").append(SEPARATOR).append(joiner.join(header)).append(SEPARATOR);
-    
+    builder.append("Column Names: ").append(joiner.join(indexMapping.keySet())).append(SEPARATOR);
+
     builder.append("Data:").append(SEPARATOR);
     for (List<String> row : rows) {
       builder.append(joiner.join(row)).append(SEPARATOR);
     }
-    
+
     return builder.toString();
   }
 }

@@ -82,20 +82,20 @@ public class RunnableAlertRulesProcessor implements Runnable {
    * @param report the ReportData to extend
    */
   protected void extendReportData(AlertRule rule, ReportData report) {
-    List<String> reportHeaderFields = rule.newReportHeaderFields();
+    List<String> reportHeaderFields = rule.newReportColumns();
     if (reportHeaderFields != null) {
       for (String newHeaderField : reportHeaderFields) {
         Preconditions.checkState(!newHeaderField.equals(ConfigTags.ALERT_MESSAGE),
             "AlertRule \"%s\" cannot add a header field with name \"%s\"!",
             rule.getClass().getSimpleName(), ConfigTags.ALERT_MESSAGE);
-        report.appendNewField(newHeaderField);
+        report.appendNewColumn(newHeaderField);
       }
     }
 
     Map<String, Integer> mapping = report.getIndexMapping();
     for (List<String> row : report.getRows()) {
       ReportRow curRow = new ReportRow(row, mapping);
-      rule.appendReportEntryFields(curRow);
+      rule.appendReportEntryValues(curRow);
     }
   }
 
@@ -122,7 +122,7 @@ public class RunnableAlertRulesProcessor implements Runnable {
    * @param report the ReportData to process (for each entry, add alert message column)
    */
   protected void appendAlertMessages(ReportData report) {
-    report.appendNewField(ConfigTags.ALERT_MESSAGE);
+    report.appendNewColumn(ConfigTags.ALERT_MESSAGE);
 
     // replace all {...} placeholders to the values for each entry
     Matcher alertMessageMatcher = alertMessagePattern.matcher(alertMessage);
@@ -139,7 +139,7 @@ public class RunnableAlertRulesProcessor implements Runnable {
             "Alert message template contains invalid placeholder: %s", curMatch);
 
         String fieldName = curMatch.substring(1, length - 1);
-        int index = report.getFieldIndex(fieldName);
+        int index = report.getColumnIndex(fieldName);
         String replacement = Matcher.quoteReplacement(row.get(index));
         alertMessageMatcher.appendReplacement(sb, replacement);
       }

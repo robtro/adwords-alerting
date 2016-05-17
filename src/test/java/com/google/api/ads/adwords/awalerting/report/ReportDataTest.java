@@ -42,14 +42,14 @@ public class ReportDataTest {
         report.getReportType(), ReportDefinitionReportType.ACCOUNT_PERFORMANCE_REPORT);
     
     // Check index mappings
-    int idxExternalCustomerId = report.getFieldIndex("ExternalCustomerId");
-    int idxDate = report.getFieldIndex("Date");
-    int idxAccountDescriptiveName = report.getFieldIndex("AccountDescriptiveName");
-    int idxCost = report.getFieldIndex("Cost");
-    int idxClicks = report.getFieldIndex("Clicks");
-    int idxImpressions = report.getFieldIndex("Impressions");
-    int idxConvertedClicks = report.getFieldIndex("ConvertedClicks");
-    int idxCtr = report.getFieldIndex("Ctr");
+    int idxExternalCustomerId = report.getColumnIndex("ExternalCustomerId");
+    int idxDate = report.getColumnIndex("Date");
+    int idxAccountDescriptiveName = report.getColumnIndex("AccountDescriptiveName");
+    int idxCost = report.getColumnIndex("Cost");
+    int idxClicks = report.getColumnIndex("Clicks");
+    int idxImpressions = report.getColumnIndex("Impressions");
+    int idxConvertedClicks = report.getColumnIndex("ConvertedClicks");
+    int idxCtr = report.getColumnIndex("Ctr");
     
     final String assertMsgColumnIndex = "Verify the report column's index";
     assertEquals(assertMsgColumnIndex, idxExternalCustomerId, 0);
