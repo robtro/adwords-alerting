@@ -1,8 +1,8 @@
-# Alerting Framework on AdWords
+# Alerting Framework for AdWords
 
 ## Overview
 
-Alerting Framework on AdWords is an open source Java framework for large
+Alerting Framework for AdWords is an open source Java framework for large
 scale AdWords API alerting. It's based on the [Java AdWords API client
 library] (https://github.com/googleads/googleads-java-lib). This framework
 is capable of downloading AdWords report data and combining with other
@@ -27,13 +27,13 @@ command:
 $ git clone https://github.com/googleads/adwords-alerting
 ```
 
-And compile the Alerting Framework on AdWords using Maven by executing the
+And compile the Alerting Framework for AdWords using Maven by executing the
 following command:
 ```
 $ mvn compile dependency:copy-dependencies package
 ```
 
-### Configure Alerting Framework on AdWords
+### Configure Alerting Framework for AdWords
 ```
 vi java/resources/aw-alerting-sample.properties
 ```
@@ -49,18 +49,18 @@ vi java/resources/aw-alerting-alerts-sample.json
 ## Run the project
 
 ```
-java -Xmx4G -jar aw-alerting.jar -file &lt;file&gt;
+java -Xmx4G -jar aw-alerting.jar -file <file>
 
 Arguments:
 
- -accountIdsFile &lt;file&gt;  ONLY run the alerting logic for client customer IDs
+ -accountIdsFile <file>  ONLY run the alerting logic for client customer IDs
                          specified in the file
 
  -debug                  Display all the debug information. If option 'verbose'
                          is present, all the information will be displayed on
                          the console as well
 
- -file &lt;file&gt;            The properties file (please refer to the file
+ -file <file>            The properties file (please refer to the file
                          ./aw-alerting-sample.properties as an example)
 
  -help                   Display full help information
