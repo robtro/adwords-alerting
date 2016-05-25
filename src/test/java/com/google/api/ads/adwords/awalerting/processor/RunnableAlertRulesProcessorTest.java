@@ -98,7 +98,8 @@ public class RunnableAlertRulesProcessorTest {
     verify(runnableAlertRulesProcessor, times(1)).run();
 
     verify(runnableAlertRulesProcessor, times(NUMBER_OF_RULES))
-        .extendReportData(Mockito.<AlertRule>anyObject(), Mockito.<ReportData>anyObject());
+        .extendAndTransformReportData(
+            Mockito.<AlertRule>anyObject(), Mockito.<ReportData>anyObject());
     verify(runnableAlertRulesProcessor, times(NUMBER_OF_RULES))
         .filterReportData(Mockito.<AlertRule>anyObject(), Mockito.<ReportData>anyObject());
     verify(runnableAlertRulesProcessor, times(1))
@@ -108,6 +109,8 @@ public class RunnableAlertRulesProcessorTest {
       verify(mockedAlertRules.get(i), times(1)).newReportColumns();
       verify(mockedAlertRules.get(i), times(NUMBER_OF_ENTRIES_IN_REPORT))
           .appendReportEntryValues(Mockito.<ReportRow>anyObject());
+      verify(mockedAlertRules.get(i), times(NUMBER_OF_ENTRIES_IN_REPORT))
+          .transformReportEntry(Mockito.<ReportRow>anyObject());
       verify(mockedAlertRules.get(i), times(NUMBER_OF_ENTRIES_IN_REPORT))
           .shouldRemoveReportEntry(Mockito.<ReportRow>anyObject());
     }
@@ -119,7 +122,8 @@ public class RunnableAlertRulesProcessorTest {
     verify(runnableAlertRulesProcessor2, times(1)).run();
 
     verify(runnableAlertRulesProcessor2, times(0))
-        .extendReportData(Mockito.<AlertRule>anyObject(), Mockito.<ReportData>anyObject());
+        .extendAndTransformReportData(
+            Mockito.<AlertRule>anyObject(), Mockito.<ReportData>anyObject());
     verify(runnableAlertRulesProcessor2, times(0))
         .filterReportData(Mockito.<AlertRule>anyObject(), Mockito.<ReportData>anyObject());
     verify(runnableAlertRulesProcessor2, times(1))

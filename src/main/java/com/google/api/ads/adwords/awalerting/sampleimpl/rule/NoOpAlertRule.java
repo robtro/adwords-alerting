@@ -43,6 +43,9 @@ public class NoOpAlertRule extends AlertRule {
 
   @Override
   public void appendReportEntryValues(ReportRow entry) {}
+  
+  @Override
+  public void transformReportEntry(ReportRow entry) {}
 
   @Override
   public boolean shouldRemoveReportEntry(ReportRow entry) {

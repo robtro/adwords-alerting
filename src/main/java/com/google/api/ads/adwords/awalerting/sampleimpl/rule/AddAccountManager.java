@@ -102,6 +102,12 @@ public class AddAccountManager extends AlertRule {
     AccountManager am = getAccountManager(clientCustomerId);
     entry.appendFieldValues(Arrays.asList(am.name, am.email));
   }
+  
+  /**
+   * Do not transform any report entry.
+   */
+  @Override
+  public void transformReportEntry(ReportRow entry) {}
 
   /**
    * Do not remove any entry from result alerts.

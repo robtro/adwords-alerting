@@ -28,7 +28,7 @@
         "ClassName": "AwqlReportDownloader",
         "ReportQuery": {
           "ReportType": "CAMPAIGN_PERFORMANCE_REPORT",
-          "Fields": "ExternalCustomerId,AccountDescriptiveName,CampaignId,CampaignName,Impressions,Clicks,ConvertedClicks,Cost",
+          "Fields": "ExternalCustomerId,AccountDescriptiveName,CampaignId,CampaignName,Impressions,Clicks,ConvertedClicks",
           "Conditions": "Impressions < 1000",
           "DateRange": "LAST_7_DAYS"
         }
@@ -63,6 +63,10 @@
       "Rules": [
         {
           "ClassName": "AddAccountManager"
+        },
+        {
+          "ClassName": "ConvertMoneyValue",
+          "MoneyField": "Cost"
         },
         {
           "ClassName": "AddAccountMonthlyBudget"

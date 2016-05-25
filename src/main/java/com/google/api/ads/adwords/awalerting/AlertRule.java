@@ -44,6 +44,12 @@ public abstract class AlertRule {
    * @param entry the report entry to append new values
    */
   public abstract void appendReportEntryValues(ReportRow entry);
+  
+  /**
+   * Modify values in the report entry.
+   * @param entry the report entry to transform 
+   */
+  public abstract void transformReportEntry(ReportRow entry);
 
   /**
    * Check whether a report entry should be removed from result alerts.

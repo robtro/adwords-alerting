@@ -31,7 +31,8 @@ public class AlertRulesTest {
   private static final String[] ALERT_RULE_CLASS_NAMES = {
       "com.google.api.ads.adwords.awalerting.sampleimpl.rule.NoOpAlertRule",
       "com.google.api.ads.adwords.awalerting.sampleimpl.rule.AddAccountManager",
-      "com.google.api.ads.adwords.awalerting.sampleimpl.rule.AddAccountMonthlyBudget"};
+      "com.google.api.ads.adwords.awalerting.sampleimpl.rule.AddAccountMonthlyBudget",
+      "com.google.api.ads.adwords.awalerting.sampleimpl.rule.ConvertMoneyValue"};
 
   /**
    * Test each alert rule implementation adheres to the interface definition.

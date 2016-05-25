@@ -16,7 +16,6 @@ package com.google.api.ads.adwords.awalerting.sampleimpl.rule;
 
 import com.google.api.ads.adwords.awalerting.AlertRule;
 import com.google.api.ads.adwords.awalerting.report.ReportRow;
-import com.google.api.ads.adwords.awalerting.util.MoneyUtil;
 import com.google.gson.JsonObject;
 
 import java.util.Calendar;
@@ -66,11 +65,13 @@ public class AddAccountMonthlyBudget extends AlertRule {
     int multiplier = random.nextInt(3);
     long budget = multiplier * 50; 
     entry.appendFieldValue(String.valueOf(budget));
-
-    // Convert cost from micro amount to normal amount.
-    long cost = Long.parseLong(entry.getFieldValue("Cost"));
-    entry.setFieldValue("Cost", MoneyUtil.toCurrencyAmountStr(cost));
   }
+  
+  /**
+   * Do not transform any report entry.
+   */
+  @Override
+  public void transformReportEntry(ReportRow entry) {}
 
   /**
    * Do not alert for accounts with budgets being well-utilized.

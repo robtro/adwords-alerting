@@ -65,7 +65,7 @@ public class RunnableAlertRulesProcessor implements Runnable {
   public void run() {
     // The execution is in the same thread
     for (AlertRule rule : rules) {
-      extendReportData(rule, report);
+      extendAndTransformReportData(rule, report);
       filterReportData(rule, report);
     }
     appendAlertMessages(report);
@@ -76,12 +76,13 @@ public class RunnableAlertRulesProcessor implements Runnable {
   }
 
   /**
-   * Extend ReportData (add more columns) using the specified alert rule.
+   * Extend (add more columns) and transform (modify some values) ReportData using the specified
+   * alert rule.
    *
    * @param rule the AlertRule to use
    * @param report the ReportData to extend
    */
-  protected void extendReportData(AlertRule rule, ReportData report) {
+  protected void extendAndTransformReportData(AlertRule rule, ReportData report) {
     List<String> reportHeaderFields = rule.newReportColumns();
     if (reportHeaderFields != null) {
       for (String newHeaderField : reportHeaderFields) {
@@ -96,6 +97,7 @@ public class RunnableAlertRulesProcessor implements Runnable {
     for (List<String> row : report.getRows()) {
       ReportRow curRow = new ReportRow(row, mapping);
       rule.appendReportEntryValues(curRow);
+      rule.transformReportEntry(curRow);
     }
   }
 
