@@ -68,7 +68,7 @@ public class AddAccountManager extends AlertRule {
   /**
    * Get account manager of the specified account.
    *
-   * As a demonstration, it just randomly choose an account manager.
+   * <p>As a demonstration, it just randomly choose an account manager.
    *
    * @param clientCustomerId the client customer ID.
    * @return the account manager of the specified account ID.

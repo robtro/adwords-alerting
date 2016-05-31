@@ -53,7 +53,7 @@ public class ReportDataLoader {
   public ReportData fromStream(InputStream stream) throws IOException {
     CSVReader csvReader = new CSVReader(new InputStreamReader(stream));
     String[] headerArray = csvReader.readNext();
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked")  // [google3 is using low version of opencsv lib] MOE:strip_line
     List<String[]> rowsArray = csvReader.readAll();
     csvReader.close();
     
