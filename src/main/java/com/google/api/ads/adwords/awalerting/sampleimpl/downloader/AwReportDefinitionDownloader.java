@@ -83,31 +83,36 @@ public class AwReportDefinitionDownloader {
   private Map<String, String> generateFieldsMapping(ReportDefinitionReportType reportType)
       throws AlertProcessingException {
     List<ReportDefinitionField> reportDefinitionFields = null;
+    Exception lastException = null;
     for (int i = 1; i <= this.retriesCount; ++i) {
       try {
+        lastException = null;
         reportDefinitionFields = downloadReportDefinitionFields(reportType);
         break;
       } catch (ApiException_Exception e) {
-        LOGGER.error("(Error getting report definition: {}, cause: {}. Retry#{}/{})", e,
-            e.getCause(), i, retriesCount);
-
-        if (this.retriesCount == i) {
-          // failed the last retry, just rethrow
-          throw new AlertProcessingException(
-              "Error getting report defintion after all retries.", e);
-        }
+        lastException = e;
+        LOGGER.error("(Error getting report definition: {}, cause: {}. Retry#{}/{})",
+            e, e.getCause(), i, retriesCount);
       }
 
       // Slow down the rate of requests increasingly to avoid running into rate limits.
       try {
-        long backoff = (long) Math.scalb(this.backoffInterval, i);
-        LOGGER.error("Back off for {}ms before next retry.", backoff);
-        Thread.sleep(backoff);
+        // Sleep unless this was the last attempt.
+        if (i < retriesCount) {
+          long backoff = (long) Math.scalb(this.backoffInterval, i);
+          LOGGER.error("Back off for {}ms before next retry.", backoff);
+          Thread.sleep(backoff);
+        }
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         throw new AlertProcessingException(
             "InterruptedException occurs while waiting to retry getting report defintion", e);
       }
+    }
+
+    if (reportDefinitionFields == null) {
+      throw new AlertProcessingException(
+          "Error getting report defintion after all retries.", lastException);
     }
 
     // Generate the fields mapping.

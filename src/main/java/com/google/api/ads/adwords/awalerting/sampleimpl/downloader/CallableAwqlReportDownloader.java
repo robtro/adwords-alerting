@@ -82,13 +82,16 @@ public class CallableAwqlReportDownloader implements Callable<ReportData> {
   @Override
   public ReportData call() throws AlertProcessingException {
     ReportData result = null;
+    Exception lastException = null;
     
     try {
       for (int i = 1; i <= this.retriesCount; i++) {
         try {
+          lastException = null;
           result = this.downloadAndProcessReport();
           break;
         } catch (AlertProcessingException e) {
+          lastException = e;
           // Retry unless it's an DetailedReportDownloadResponseException.
           if (e.getCause() instanceof DetailedReportDownloadResponseException) {
             DetailedReportDownloadResponseException detailedException =
@@ -104,8 +107,11 @@ public class CallableAwqlReportDownloader implements Callable<ReportData> {
         // If we haven't succeeded, slow down the rate of requests (with exponential back off)
         // to avoid running into rate limits.
         try {
-          long backoff = (long) Math.scalb(this.backoffInterval, i);
-          Thread.sleep(backoff);
+          // Sleep unless this was the last attempt.
+          if (i < retriesCount) {
+            long backoff = (long) Math.scalb(this.backoffInterval, i);
+            Thread.sleep(backoff);
+          }
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           throw new AlertProcessingException(
@@ -119,7 +125,8 @@ public class CallableAwqlReportDownloader implements Callable<ReportData> {
     }
     
     if (result == null) {
-      throw new AlertProcessingException("Failed to download report after all retries.");
+      throw new AlertProcessingException(
+          "Failed to download report after all retries.", lastException);
     }
     
     return result;
