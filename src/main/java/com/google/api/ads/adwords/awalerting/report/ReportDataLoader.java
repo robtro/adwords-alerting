@@ -48,9 +48,10 @@ public class ReportDataLoader {
    * Generate ReportData from an input stream (normally an HTTP steam of report in CSV format),
    * which will be closed after reading.
    * @param stream the input stream (in CSV format)
+   * @param clientCustomerId the client customer ID of this report
    * @return the generated ReportData
    */
-  public ReportData fromStream(InputStream stream) throws IOException {
+  public ReportData fromStream(InputStream stream, Long clientCustomerId) throws IOException {
     CSVReader csvReader = new CSVReader(new InputStreamReader(stream));
     String[] headerArray = csvReader.readNext();
     @SuppressWarnings("unchecked")  // [google3 is using low version of opencsv lib] MOE:strip_line
@@ -73,6 +74,6 @@ public class ReportDataLoader {
       columnNames.add(fieldName);
     }
     
-    return new ReportData(reportType, columnNames, rows);
+    return new ReportData(clientCustomerId, reportType, columnNames, rows);
   }
 }

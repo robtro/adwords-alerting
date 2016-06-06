@@ -15,37 +15,26 @@
 package com.google.api.ads.adwords.awalerting.sampleimpl.downloader;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import com.google.api.ads.adwords.awalerting.AlertProcessingException;
+import com.google.api.ads.adwords.awalerting.report.AwqlReportQuery;
 import com.google.api.ads.adwords.awalerting.report.ReportData;
+import com.google.api.ads.adwords.awalerting.report.ReportDataLoader;
 import com.google.api.ads.adwords.awalerting.util.TestEntitiesGenerator;
 import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionReportType;
 import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.api.ads.common.lib.exception.ValidationException;
-import com.google.common.util.concurrent.Futures;
 import com.google.gson.JsonObject;
 
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 
 /**
  * Test case for the {@link AwqlReportDownloader} class.
@@ -55,74 +44,58 @@ public class AwqlReportDownloaderTest {
 
   private static final int NUMBER_OF_ACCOUNTS = 100;
 
-  @Spy
-  private AwqlReportDownloader mockedAwqlReportDownloader;
-  
-  @Mock
-  private AwReportDefinitionDownloader reportDefinitionDownloader;
-  
-  @Before
-  public void setUp() throws Exception {
-    JsonObject config = TestEntitiesGenerator.getTestReportDownloaderConfig();
-    mockedAwqlReportDownloader = new AwqlReportDownloader(config);
-
-    MockitoAnnotations.initMocks(this);
-
-    mockReportDefinitionDownloader();
-  }
-
-  private void mockReportDefinitionDownloader() throws AlertProcessingException {
-    Mockito
-        .doAnswer(new Answer<Map<String, String>>() {
-          @Override
-          public Map<String, String> answer(InvocationOnMock invocation) throws Throwable {
-            ReportDefinitionReportType reportType =
-                (ReportDefinitionReportType) invocation.getArguments()[0];
-            if (reportType.equals(ReportDefinitionReportType.ACCOUNT_PERFORMANCE_REPORT)) {
-              return TestEntitiesGenerator.getTestFiledsMapping();
-            }
-            // Undefined report type on this test
-            throw (new Exception("Undefined report type on Tests: " + reportType.value()));
-          }
-        })
-        .when(reportDefinitionDownloader)
-        .getFieldsMapping(Mockito.<ReportDefinitionReportType>anyObject());
-  }
-  
-  /**
-   * Tests the downloadReports(...).
-   */
   @Test
-  public void testDownloadReports() throws ValidationException, AlertProcessingException {
-    Mockito.doAnswer(new Answer<Future<ReportData>>() {
+  public void testDownloadReports()
+      throws ValidationException, AlertProcessingException, IOException {
+    JsonObject config = TestEntitiesGenerator.getTestReportDownloaderConfig();
+    ImmutableAdWordsSession session = TestEntitiesGenerator.getTestAdWordsSession();
+    
+    final Map<String, String> fieldsMapping = TestEntitiesGenerator.getTestFiledsMapping();
+    final ReportData reportData = TestEntitiesGenerator.getTestReportData();
+    final AwqlReportQuery reportQuery =
+        new AwqlReportQuery(TestEntitiesGenerator.getTestReportQueryConfig());
+    
+    // Create a test AwReportDefinitionDownloader that just returns test fields mapping.
+    AwReportDefinitionDownloader reportDefDownloader = new AwReportDefinitionDownloader(session) {
       @Override
-      public Future<ReportData> answer(InvocationOnMock invocation) throws Throwable {
-        ((CountDownLatch) invocation.getArguments()[2]).countDown();
-        return Futures.immediateFuture(TestEntitiesGenerator.getTestReportData());
+      public Map<String, String> getFieldsMapping(ReportDefinitionReportType reportType) {
+        return fieldsMapping;
       }
-    }).when(mockedAwqlReportDownloader).submitCallableDownloader(
-        Mockito.<ExecutorService>anyObject(),
-        Mockito.<CallableAwqlReportDownloader>anyObject(),
-        Mockito.<CountDownLatch>anyObject());
-   
+    };
+
+    // Create a test AwqlReportDownloader which spawns test CallableAwqlReportDownloader instance,
+    // which in turn just return test ReportData.
+    AwqlReportDownloader reportDownloader = new AwqlReportDownloader(config) {
+      @Override
+      protected CallableAwqlReportDownloader genCallableAwqlReportDownloader(
+          ImmutableAdWordsSession session, ReportDataLoader loader) {
+        return new CallableAwqlReportDownloader(session, reportQuery, loader) {
+          @Override
+          public ReportData call() throws AlertProcessingException {
+            System.out.println(
+                "Running CallableAwqlReportDownloader on tid " + Thread.currentThread().getId());
+            return reportData;
+          }
+        };
+      }
+    };
+
     Set<Long> cids = new HashSet<Long>(NUMBER_OF_ACCOUNTS);
     for (int i = 1; i <= NUMBER_OF_ACCOUNTS; i++) {
       cids.add(Long.valueOf(i));
     }
 
-    ImmutableAdWordsSession session = TestEntitiesGenerator.getTestAdWordsSession();
-    List<ReportData> results =
-        mockedAwqlReportDownloader.downloadReports(session, reportDefinitionDownloader, cids);
-
-    ArgumentCaptor<CountDownLatch> argument = ArgumentCaptor.forClass(CountDownLatch.class);
-    verify(mockedAwqlReportDownloader, times(NUMBER_OF_ACCOUNTS)).submitCallableDownloader(
-        Mockito.<ExecutorService>anyObject(),
-        Mockito.<CallableAwqlReportDownloader>anyObject(),
-        argument.capture());
-  
-    assertEquals("CountDownLactch should reach 0 after all download jobs complete",
-        argument.getValue().getCount(), 0);
-    assertEquals("Number of reports downloaded should equal to number of accounts",
+    List<ReportData> results = reportDownloader.downloadReports(session, reportDefDownloader, cids);
+    
+    // Check test result.
+    assertEquals(
+        "Number of reports downloaded should equal to number of accounts",
         results.size(), NUMBER_OF_ACCOUNTS);
+
+    for (int i = 0; i < NUMBER_OF_ACCOUNTS; i++) {
+      assertEquals(
+          "The downloaded report data #" + (i + 1) + " is not expected",
+          results.get(i), reportData);
+    }
   }
 }

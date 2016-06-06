@@ -33,13 +33,11 @@ import java.util.Set;
  * }
  * </pre>
  */
-public class NoOpAlertReportDownloader extends AlertReportDownloader {
+public class NoOpAlertReportDownloader implements AlertReportDownloader {
   /**
    * @param config the JsonObject for this alert report downloader configuration
    */
-  public NoOpAlertReportDownloader(JsonObject config) {
-    super(config);
-  }
+  public NoOpAlertReportDownloader(JsonObject config) {}
 
   @Override
   public List<ReportData> downloadReports(

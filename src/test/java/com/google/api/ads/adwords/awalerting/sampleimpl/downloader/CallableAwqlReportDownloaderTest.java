@@ -46,11 +46,9 @@ import java.io.IOException;
 @RunWith(JUnit4.class)
 public class CallableAwqlReportDownloaderTest {
 
-  @Spy
-  private CallableAwqlReportDownloader mockedRunnableAwqlReportDownloader;
-  
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
+  @Spy private CallableAwqlReportDownloader mockedCallableAwqlReportDownloader;
+
+  @Rule public ExpectedException thrown = ExpectedException.none();
 
   @Before
   public void setUp() throws ValidationException {
@@ -59,24 +57,22 @@ public class CallableAwqlReportDownloaderTest {
     AwqlReportQuery reportQuery = new AwqlReportQuery(jsonConfig);
     ReportDataLoader reportDataLoader = TestEntitiesGenerator.getTestReportDataLoader();
 
-    mockedRunnableAwqlReportDownloader =
+    mockedCallableAwqlReportDownloader =
         new CallableAwqlReportDownloader(session, reportQuery, reportDataLoader);
-    mockedRunnableAwqlReportDownloader.setRetriesCount(5);
-    mockedRunnableAwqlReportDownloader.setBackoffInterval(0);
+    mockedCallableAwqlReportDownloader.setMaxNumberOfAttempts(5);
+    mockedCallableAwqlReportDownloader.setBackoffInterval(0);
 
     MockitoAnnotations.initMocks(this);
   }
 
   @Test
-  public void testRun() throws IOException, AlertProcessingException {
+  public void testRun() throws AlertProcessingException, IOException {
     doReturn(TestEntitiesGenerator.getTestReportData())
-        .when(mockedRunnableAwqlReportDownloader)
-        .downloadAndProcessReport();
+        .when(mockedCallableAwqlReportDownloader)
+        .call();
 
-    mockedRunnableAwqlReportDownloader.call();
-
-    verify(mockedRunnableAwqlReportDownloader, times(1)).downloadAndProcessReport();
-    verify(mockedRunnableAwqlReportDownloader, times(1)).call();
+    mockedCallableAwqlReportDownloader.call();
+    verify(mockedCallableAwqlReportDownloader, times(1)).call();
   }
 
   @Test
@@ -84,21 +80,18 @@ public class CallableAwqlReportDownloaderTest {
     ReportException e = new ReportException("ReportException: UnitTest Retryable Server Error");
     AlertProcessingException ex =
         new AlertProcessingException("ReportException occurs when downloading report.", e);
-    doThrow(ex).when(mockedRunnableAwqlReportDownloader).downloadAndProcessReport();
+    doThrow(ex).when(mockedCallableAwqlReportDownloader).getReportDownloadResponse();
 
     thrown.expect(AlertProcessingException.class);
     thrown.expectMessage("Failed to download report after all retries.");
-    mockedRunnableAwqlReportDownloader.call();
+    mockedCallableAwqlReportDownloader.call();
 
-    verify(mockedRunnableAwqlReportDownloader, times(5)).downloadAndProcessReport();
-    verify(mockedRunnableAwqlReportDownloader, times(1)).call();
+    verify(mockedCallableAwqlReportDownloader, times(5)).getReportDownloadResponse();
+    verify(mockedCallableAwqlReportDownloader, times(1)).call();
   }
 
   /**
-   * Test for DetailedReportDownloadResponseExceptions.
-   * 
-   * <p>a DetailedReportDownloadResponseException breaks the retries,
-   * typically is an invalid field in the definition.
+   * Test for DetailedReportDownloadResponseExceptions, which breaks the retry logic.
    */
   @Test
   public void testRun_noRetry() throws AlertProcessingException {
@@ -107,13 +100,13 @@ public class CallableAwqlReportDownloaderTest {
     AlertProcessingException ex =
         new AlertProcessingException(
             "ReportDownloadResponseException occurs when downloading report.", e);
-    doThrow(ex).when(mockedRunnableAwqlReportDownloader).downloadAndProcessReport();
-    
+    doThrow(ex).when(mockedCallableAwqlReportDownloader).getReportDownloadResponse();
+
     thrown.expect(AlertProcessingException.class);
     thrown.expectMessage(ex.getMessage());
-    mockedRunnableAwqlReportDownloader.call();
+    mockedCallableAwqlReportDownloader.call();
 
-    verify(mockedRunnableAwqlReportDownloader, times(1)).downloadAndProcessReport();
-    verify(mockedRunnableAwqlReportDownloader, times(1)).call();
+    verify(mockedCallableAwqlReportDownloader, times(1)).getReportDownloadResponse();
+    verify(mockedCallableAwqlReportDownloader, times(1)).call();
   }
 }

@@ -132,7 +132,7 @@ public class TestEntitiesGenerator {
    * Test report entries: 7
    */
   public static ReportData getTestReportData() throws IOException {
-    return getTestReportDataLoader().fromStream(getTestReportStream());
+    return getTestReportDataLoader().fromStream(getTestReportStream(), 1L);
   }
   
   public static int getTestReportDataRows() {

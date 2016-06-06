@@ -45,7 +45,8 @@ import java.util.Set;
  * Class to download report data from database (such as aw-reporting's local database).
  *
  * <p>
- * The JSON config should look like: <pre>
+ * The JSON config should look like:
+ * <pre>
  * {
  *   "ClassName": "SqlDbReportDownloader",
  *   "Database": {
@@ -88,7 +89,7 @@ import java.util.Set;
  * }
  * </pre>
  */
-public class SqlDbReportDownloader extends AlertReportDownloader {
+public class SqlDbReportDownloader implements AlertReportDownloader {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SqlDbReportDownloader.class);
 
@@ -117,7 +118,6 @@ public class SqlDbReportDownloader extends AlertReportDownloader {
   private JsonObject config;
 
   public SqlDbReportDownloader(JsonObject config) {
-    super(config);
     this.config = config;
   }
 
@@ -125,7 +125,7 @@ public class SqlDbReportDownloader extends AlertReportDownloader {
   public List<ReportData> downloadReports(
       ImmutableAdWordsSession protoSession, Set<Long> clientCustomerIds)
       throws AlertProcessingException {
-    Map<String, ReportData> reportDataMap = new HashMap<String, ReportData>();
+    Map<Long, ReportData> reportDataMap = new HashMap<Long, ReportData>();
 
     Connection dbConnection = null;
     Statement dbStatement = null;
@@ -160,12 +160,14 @@ public class SqlDbReportDownloader extends AlertReportDownloader {
           row.add(dbResult.getString(columnCount));
         }
 
-        String customerId = row.get(customerIdColumnIndex);
+        String customerIdStr = row.get(customerIdColumnIndex);
+        Long customerId = Long.parseLong(customerIdStr);
         ReportData reportData = reportDataMap.get(customerId);
         if (reportData == null) {
           // ReportDefinitionReportType doesn't really matter (just for some printing purpose),
           // so don't bother find it from database table name.
-          reportData = new ReportData(ReportDefinitionReportType.UNKNOWN, reportColumnNames);
+          reportData =
+              new ReportData(customerId, ReportDefinitionReportType.UNKNOWN, reportColumnNames);
           reportDataMap.put(customerId, reportData);
         }
         reportData.addRow(row);

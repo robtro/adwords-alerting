@@ -18,6 +18,7 @@ import com.google.api.ads.adwords.awalerting.AlertProcessingException;
 import com.google.api.ads.adwords.awalerting.report.AwqlReportQuery;
 import com.google.api.ads.adwords.awalerting.report.ReportData;
 import com.google.api.ads.adwords.awalerting.report.ReportDataLoader;
+import com.google.api.ads.adwords.awalerting.util.RetryHelper;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
 import com.google.api.ads.adwords.lib.jaxb.v201603.DownloadFormat;
 import com.google.api.ads.adwords.lib.utils.ReportDownloadResponse;
@@ -27,142 +28,78 @@ import com.google.api.ads.adwords.lib.utils.v201603.DetailedReportDownloadRespon
 import com.google.api.ads.adwords.lib.utils.v201603.ReportDownloader;
 import com.google.api.client.util.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.HttpURLConnection;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
 import java.util.zip.GZIPInputStream;
 
 /**
- * This {@link Callable} implements the core logic to download the reporting data
- * from the AdWords API.
+ * This {@link Callable} implements the core logic to download the reporting data from the AdWords
+ * API.
  */
 public class CallableAwqlReportDownloader implements Callable<ReportData> {
   private static final Logger LOGGER = LoggerFactory.getLogger(CallableAwqlReportDownloader.class);
 
-  private static final int RETRIES_COUNT = 20;
+  private static final int MAX_NUMBER_OF_ATTEMPTS = 20;
   private static final int BACKOFF_INTERVAL = 1000 * 5;
 
-  private int retriesCount = RETRIES_COUNT;
+  private int maxNumberOfAttempts = MAX_NUMBER_OF_ATTEMPTS;
   private int backoffInterval = BACKOFF_INTERVAL;
-
-  private CountDownLatch latch;
 
   private final AdWordsSession session;
   private final AwqlReportQuery reportQuery;
   private final ReportDataLoader reportDataLoader;
 
   /**
-   * @param session the adwords session used for downloading report
-   * @param reportQuery the AWQL query to download report
-   * @param reportDataLoader the loader for generating ReportData from stream
+   * The constructor takes an adwords session and an AWQL query for downloading report, and a
+   * report data loader for generating ReportData from stream.
    */
   public CallableAwqlReportDownloader(
-      AdWordsSession session, AwqlReportQuery reportQuery, ReportDataLoader reportDataLoader) {
-    this.session = session;
-    this.reportQuery = reportQuery;
-    this.reportDataLoader = reportDataLoader;
+      AdWordsSession session,
+      AwqlReportQuery reportQuery,
+      ReportDataLoader reportDataLoader) {
+    this.session = Preconditions.checkNotNull(session, "session cannot be null.");
+    this.reportQuery = Preconditions.checkNotNull(reportQuery, "reportQuery cannot be null.");
+    this.reportDataLoader =
+        Preconditions.checkNotNull(reportDataLoader, "reportDataLoader cannot be null.");
   }
-
+  
   /**
-   * Executes the API call to download the report that was given when this
-   * {@code Runnable} was created.
-   *
-   * <p>The download blocks this thread until it is finished, and also does the
-   * file unzipping.
-   *
-   * <p>There is also a retry logic implemented by this method, where the times
-   * retried depends on the value given in the constructor.
+   * Downloads report from API (with retry logic) and transforms the result into a
+   * {@link ReportData} object.
    */
   @Override
   public ReportData call() throws AlertProcessingException {
-    ReportData result = null;
-    Exception lastException = null;
-    
-    try {
-      for (int i = 1; i <= this.retriesCount; i++) {
-        try {
-          lastException = null;
-          result = this.downloadAndProcessReport();
-          break;
-        } catch (AlertProcessingException e) {
-          lastException = e;
-          // Retry unless it's an DetailedReportDownloadResponseException.
-          if (e.getCause() instanceof DetailedReportDownloadResponseException) {
-            DetailedReportDownloadResponseException detailedException =
-                (DetailedReportDownloadResponseException) e.getCause();
-            LOGGER.error("(Error: {}, Trigger: {})", detailedException.getType(),
-                detailedException.getTrigger());
-            throw e;
-          }
-          
-          printRetryMessageOnException(e, i);
-        }
+    // Retry on downloading report.
+    Callable<ReportDownloadResponse> callable = new Callable<ReportDownloadResponse>() {
+      @Override
+      public ReportDownloadResponse call() throws AlertProcessingException {
+        return getReportDownloadResponse();
+      }
+    };
 
-        // If we haven't succeeded, slow down the rate of requests (with exponential back off)
-        // to avoid running into rate limits.
-        try {
-          // Sleep unless this was the last attempt.
-          if (i < retriesCount) {
-            long backoff = (long) Math.scalb(this.backoffInterval, i);
-            Thread.sleep(backoff);
-          }
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw new AlertProcessingException(
-              "InterruptedException occurs while waiting to retry downloading report", e);
-        }
-      }
-    } finally {
-      if (this.latch != null) {
-        this.latch.countDown();
-      }
-    }
+    ImmutableList<Class<? extends Exception>> nonRetriableExceptions =
+        ImmutableList.<Class<? extends Exception>>of(DetailedReportDownloadResponseException.class);
+    ReportDownloadResponse reportDownloadResponse = RetryHelper.callsWithRetries(
+        callable, "download report", maxNumberOfAttempts, backoffInterval, nonRetriableExceptions);
     
-    if (result == null) {
-      throw new AlertProcessingException(
-          "Failed to download report after all retries.", lastException);
-    }
-    
-    return result;
+    InputStream inputStream = reportDownloadResponse.getInputStream();
+    return handleReportStreamResult(inputStream);
   }
 
   /**
-   * Print default retry message.
-   *
-   * @param e the exception caught
-   * @param retrySequence the sequence number of the retry
+   * Gets the report download response from the API.
    */
-  private void printRetryMessageOnException(Exception e, int retrySequence) {
-    LOGGER.error("(Error downloading report: {}, Cause: {}. Retry# {}/{}.)", e, e.getCause(),
-        retrySequence, retriesCount);
-  }
-
-  /**
-   * Downloads the report from the API.
-   *
-   * @return the downloaded report data
-   */
-  protected ReportData downloadAndProcessReport() throws AlertProcessingException {
+  protected ReportDownloadResponse getReportDownloadResponse() throws AlertProcessingException {
     try {
       ReportDownloader reportDownloader = new ReportDownloader(session);
-      ReportDownloadResponse reportDownloadResponse =
-          reportDownloader.downloadReport(reportQuery.generateAWQL(), DownloadFormat.GZIPPED_CSV);
-
-      if (reportDownloadResponse.getHttpStatus() == HttpURLConnection.HTTP_OK) {
-        InputStream reportStream = reportDownloadResponse.getInputStream();
-        return handleReportStreamResult(reportStream);
-      } else {
-        LOGGER.error("getHttpStatus(): {}", reportDownloadResponse.getHttpStatus());
-        LOGGER.error(
-            "getHttpResponseMessage(): {}", reportDownloadResponse.getHttpResponseMessage());
-        throw new AlertProcessingException("Failed to download report: HTTP status error.");
-      }
+      return reportDownloader.downloadReport(
+          reportQuery.generateAWQL(), DownloadFormat.GZIPPED_CSV);
     } catch (ReportException e) {
       throw new AlertProcessingException("ReportException occurs when downloading report.", e);
     } catch (ReportDownloadResponseException e) {
@@ -172,53 +109,41 @@ public class CallableAwqlReportDownloader implements Callable<ReportData> {
   }
 
   /**
+   * Transforms the downloaded result into a {@link ReportData} object.
+   *
    * @param reportStream the downloaded report stream
    * @return the downloaded report data
    */
   private ReportData handleReportStreamResult(InputStream reportStream)
       throws AlertProcessingException {
     Preconditions.checkState(reportStream != null, "Cannot get report data: input stream is NULL.");
+
+    // Get clientCustomerId from session and covert to Long type. The string field was set from
+    // Long type in AwqlReportDownloader, so it's able to parse back to Long.
+    Long clientCustomerId = Long.parseLong(session.getClientCustomerId());
     
+    GZIPInputStream gzipReportStream = null;
     try {
-      GZIPInputStream gzipReportStream = new GZIPInputStream(reportStream);
-      ReportData result = loadReportData(gzipReportStream);
+      gzipReportStream = new GZIPInputStream(reportStream);
+      
+      // Parse the CSV file into report.
+      LOGGER.debug("Starting processing rules of report...");
+      ReportData result = reportDataLoader.fromStream(gzipReportStream, clientCustomerId);
+      LOGGER.debug("... success.");
+      
       gzipReportStream.close();
       return result;
     } catch (IOException e) {
-      LOGGER.error("Error when unzipping and loading the {} of account {}.",
+      LOGGER.error(
+          "Error when unzipping and loading the {} of account {}.",
           reportQuery.getReportType(), session.getClientCustomerId());
       throw new AlertProcessingException("Failed to load report data from stream.", e);
     }
   }
-
-  /**
-   * Load the report data from downloaded report stream.
-   *
-   * @param gzipReportStream the downloaded and unzipped stream (CSV format)
-   * @return the downloaded report data
-   */
-  private ReportData loadReportData(GZIPInputStream gzipReportStream) throws IOException {
-    // Parse the CSV file into report.
-    LOGGER.debug("Starting processing rules of report...");
-    ReportData result = reportDataLoader.fromStream(gzipReportStream);
-    LOGGER.debug("... success.");
-
-    return result;
-  }
-
-  /**
-   * @param latch the latch to set
-   */
-  public void setLatch(CountDownLatch latch) {
-    this.latch = latch;
-  }
-
-  /**
-   * For testing.
-   */
+  
   @VisibleForTesting
-  protected void setRetriesCount(int retriesCount) {
-    this.retriesCount = retriesCount;
+  protected void setMaxNumberOfAttempts(int maxNumberOfAttempts) {
+    this.maxNumberOfAttempts = maxNumberOfAttempts;
   }
 
   @VisibleForTesting

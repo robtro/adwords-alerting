@@ -19,8 +19,10 @@ import com.google.api.ads.adwords.awalerting.AlertReportDownloader;
 import com.google.api.ads.adwords.awalerting.report.AwqlReportQuery;
 import com.google.api.ads.adwords.awalerting.report.ReportData;
 import com.google.api.ads.adwords.awalerting.report.ReportDataLoader;
+import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionReportType;
 import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.api.ads.common.lib.exception.ValidationException;
+import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.gson.JsonObject;
 
@@ -28,10 +30,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,7 +41,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Class to handle all the concurrent file downloads from the reporting API.
+ * Class that concurrently downloads report via the reporting API.
  * 
  * <p>An {@link ExecutorService} is created in order to handle all the threads. To initialize the
  * executor is necessary to call {@code initializeExecutorService}, and to finalize the executor
@@ -59,8 +61,9 @@ import java.util.concurrent.TimeUnit;
  * }
  * </pre>
  */
-public class AwqlReportDownloader extends AlertReportDownloader {
+public class AwqlReportDownloader implements AlertReportDownloader {
   private static final Logger LOGGER = LoggerFactory.getLogger(AwqlReportDownloader.class);
+  private static final String SEPARATOR = System.getProperty("line.separator");
 
   private static final String REPORT_QUERY_TAG = "ReportQuery";
 
@@ -68,31 +71,11 @@ public class AwqlReportDownloader extends AlertReportDownloader {
   private int numThreads = NUM_THREADS;
 
   private final AwqlReportQuery reportQuery;
-
-  private static class DownloadJob {
-    final Long clientCustomerId;
-    final Future<ReportData> future;
-
-    DownloadJob(Long clientCustomerId, Future<ReportData> future) {
-      this.clientCustomerId = clientCustomerId;
-      this.future = future;
-    }
-
-    public Long getClientCustomerId() {
-      return clientCustomerId;
-    }
-
-    public Future<ReportData> getFuture() {
-      return future;
-    }
-  }
-
+  
   /**
    * @param config the JsonObject for this alert report downloader configuration
    */
   public AwqlReportDownloader(JsonObject config) {
-    super(config);
-
     JsonObject reportQueryConfig = config.getAsJsonObject(REPORT_QUERY_TAG);
     this.reportQuery = new AwqlReportQuery(reportQueryConfig);
   }
@@ -122,9 +105,9 @@ public class AwqlReportDownloader extends AlertReportDownloader {
     return downloadReports(protoSession, reportDefinitionDownloader, clientCustomerIds);
   }
 
-    /**
-   * Downloads the specified report for all specified CIDs.
-   * Returns List<File> for all successful downloads, and prints out list of failed CIDs.
+  /**
+   * Downloads the specified report for all specified CIDs, returns List<File> for all successful
+   * downloads, and prints out list of failed CIDs.
    *
    * @param protoSession the prototype adwords session used for downloading reports
    * @param reportDefinitionDownloader report definition downloader (for getting fields mapping)
@@ -136,18 +119,17 @@ public class AwqlReportDownloader extends AlertReportDownloader {
       AwReportDefinitionDownloader reportDefinitionDownloader,
       Set<Long> clientCustomerIds)
       throws AlertProcessingException {
-    CountDownLatch latch = new CountDownLatch(clientCustomerIds.size());
     ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
     Stopwatch stopwatch = Stopwatch.createStarted();
-
     LOGGER.info("Downloading {} reports...", reportQuery.getReportType());
     
-    Map<String, String> fieldsMapping =
-        reportDefinitionDownloader.getFieldsMapping(reportQuery.getReportTypeEnum());
-    ReportDataLoader loader = new ReportDataLoader(reportQuery.getReportTypeEnum(), fieldsMapping);
+    ReportDefinitionReportType reportType = reportQuery.getReportTypeEnum();
+    Map<String, String> fieldsMapping = reportDefinitionDownloader.getFieldsMapping(reportType);
+    ReportDataLoader loader = new ReportDataLoader(reportType, fieldsMapping);
     
-    List<DownloadJob> downloadJobs = new ArrayList<DownloadJob>(clientCustomerIds.size());
-    List<Long> failures = new ArrayList<Long>();
+    List<Long> taskIds = new ArrayList<>();
+    List<CallableAwqlReportDownloader> taskJobs = new ArrayList<>();
+    Map<Long, String> failures = new HashMap<>();
     ImmutableAdWordsSession session = null;
     for (Long clientCustomerId : clientCustomerIds) {
       try {
@@ -155,33 +137,29 @@ public class AwqlReportDownloader extends AlertReportDownloader {
       } catch (ValidationException e) {
         LOGGER.error(
             "Failed to create valid adwords session for CID {}, skipping it.", clientCustomerId);
-        failures.add(clientCustomerId);
+        failures.put(clientCustomerId, e.getMessage());
         continue;
       }
       
-      CallableAwqlReportDownloader callableDownloader =
-          new CallableAwqlReportDownloader(session, reportQuery, loader);
-      Future<ReportData> future =
-          submitCallableDownloader(executorService, callableDownloader, latch);
-      downloadJobs.add(new DownloadJob(clientCustomerId, future));
+      taskIds.add(clientCustomerId);
+      taskJobs.add(genCallableAwqlReportDownloader(session, loader));
     }
-
+    
+    List<Future<ReportData>> taskResults;
     try {
-      latch.await();
+      //Note that invokeAll() returns results in the same sequence as input tasks.
+      taskResults = executorService.invokeAll(taskJobs);
     } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
       throw new AlertProcessingException(
-          "AwqlReportDownloader encounters InterruptedException.", e);
+        "AwqlReportDownloader encounters InterruptedException.", e);
     }
-
-    List<ReportData> results = new ArrayList<ReportData>();
-    ReportData report = null;
-    for (DownloadJob job : downloadJobs) {
+    
+    List<ReportData> results = new ArrayList<>();
+    for (int i = 0; i < taskResults.size(); i++) {
       try {
-        report = job.getFuture().get();
-        results.add(report);
+        results.add(taskResults.get(i).get());
       } catch (ExecutionException e) {
-        failures.add(job.getClientCustomerId());
+        failures.put(taskIds.get(i), e.getMessage());
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         throw new AlertProcessingException(
@@ -193,21 +171,22 @@ public class AwqlReportDownloader extends AlertReportDownloader {
     stopwatch.stop();
 
     LOGGER.info("Downloaded reports for {} accounts in {} seconds.",
-        clientCustomerIds.size(), stopwatch.elapsed(TimeUnit.MILLISECONDS) / 1000);
+        clientCustomerIds.size(), stopwatch.elapsed(TimeUnit.SECONDS));
     LOGGER.info("Result: {} successes, {} failures.", results.size(), failures.size());
 
     if (!failures.isEmpty()) {
-      LOGGER.error("*** Account IDs of download failures:");
-      for (Long failure : failures) {
-        LOGGER.error("\t{}", failure);
-      }
+      StringBuilder sb = new StringBuilder("*** Account IDs of download failures ***");
+      sb.append(SEPARATOR);
+      sb.append(Joiner.on(SEPARATOR).withKeyValueSeparator(": ").join(failures));
+      LOGGER.error(sb.toString());
     }
 
     return results;
   }
 
   /**
-   * Build a new {@code ImmutableAdWordsSession} for the given cid.
+   * Builds a new {@code ImmutableAdWordsSession} for the given cid.
+   * 
    * @param protoSession the prototype of adwords session for building another session
    * @param cid the client customer id
    * @return an immutable adwords session for the specified cid
@@ -217,10 +196,12 @@ public class AwqlReportDownloader extends AlertReportDownloader {
     String cidStr = cid == null ? null : String.valueOf(cid);
     return protoSession.newBuilder().withClientCustomerId(cidStr).buildImmutable();
   }
-
-  protected Future<ReportData> submitCallableDownloader(ExecutorService executorService,
-      CallableAwqlReportDownloader callableDownloader, CountDownLatch latch) {
-    callableDownloader.setLatch(latch);
-    return executorService.submit(callableDownloader);
+  
+  /**
+   * Generates a CallableAwqlReportDownloader for downloading report in a service thread.
+   */
+  protected CallableAwqlReportDownloader genCallableAwqlReportDownloader(
+      ImmutableAdWordsSession session, ReportDataLoader loader) {
+    return new CallableAwqlReportDownloader(session, reportQuery, loader);
   }
 }

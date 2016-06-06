@@ -29,6 +29,7 @@ import java.util.Map;
 public class ReportData {
   private static final String SEPARATOR = System.getProperty("line.separator");
 
+  private final Long clientCustomerId;
   private final ReportDefinitionReportType reportType;
 
   // use List instead of native array[], since report data will be enriched.
@@ -37,26 +38,37 @@ public class ReportData {
   // Column name -> row index (0-based) mapping.
   private final Map<String, Integer> indexMapping;
 
-  /**
-   * @param reportType the report type
-   * @param columnNames the column names of the report
-   * @param rows the 2 dimensional list of values in the report
-   */
   public ReportData(
-      ReportDefinitionReportType reportType, List<String> columnNames, List<List<String>> rows) {
-    this.reportType = reportType;
-    this.rows = rows;
-
+      Long clientCustomerId,
+      ReportDefinitionReportType reportType,
+      List<String> columnNames,
+      List<List<String>> rows) {
+    this.clientCustomerId =
+        Preconditions.checkNotNull(clientCustomerId, "clientCustomerId cannot be null.");
+    this.reportType = Preconditions.checkNotNull(reportType, "reportType cannot be null.");
+    
     // Use LinkedHashMap to preserve ordering of keys.
+    Preconditions.checkNotNull(columnNames, "columnNames cannot be null.");
     int columns = columnNames.size();
     this.indexMapping = new LinkedHashMap<String, Integer>(columns);
     for (int i = 0; i < columns; i++) {
       this.indexMapping.put(columnNames.get(i), Integer.valueOf(i));
     }
+    
+    this.rows = rows;
   }
 
-  public ReportData(ReportDefinitionReportType reportType, List<String> columnNames) {
-    this(reportType, columnNames, new ArrayList<List<String>>());
+  public ReportData(
+      Long clientCustomerId, ReportDefinitionReportType reportType, List<String> columnNames) {
+    this(clientCustomerId, reportType, columnNames, new ArrayList<List<String>>());
+  }
+  
+  public Long getClientCustomerId() {
+    return clientCustomerId;
+  }
+
+  public ReportDefinitionReportType getReportType() {
+    return reportType;
   }
   
   public List<String> getColumnNames() {
@@ -121,10 +133,6 @@ public class ReportData {
     indexMapping.put(columnName, Integer.valueOf(newIndex));
   }
 
-  public ReportDefinitionReportType getReportType() {
-    return reportType;
-  }
-
   /**
    * Returns string representation of the report.
    */
@@ -133,14 +141,13 @@ public class ReportData {
     StringBuilder builder = new StringBuilder();
     Joiner joiner = Joiner.on(',');
 
-    builder.append(reportType.value()).append(":").append(SEPARATOR);
-    builder.append("Column Names: ").append(joiner.join(indexMapping.keySet())).append(SEPARATOR);
-
-    builder.append("Data:").append(SEPARATOR);
+    builder.append(reportType.value()).append(" of account ").append(clientCustomerId).append(":");
+    builder.append(SEPARATOR).append("Column Names: ").append(joiner.join(indexMapping.keySet()));
+    builder.append(SEPARATOR).append("Data:");
     for (List<String> row : rows) {
-      builder.append(joiner.join(row)).append(SEPARATOR);
+      builder.append(SEPARATOR).append(joiner.join(row));
     }
 
-    return builder.toString();
+    return builder.append(SEPARATOR).toString();
   }
 }

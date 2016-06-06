@@ -15,6 +15,7 @@
 package com.google.api.ads.adwords.awalerting.sampleimpl.downloader;
 
 import com.google.api.ads.adwords.awalerting.AlertProcessingException;
+import com.google.api.ads.adwords.awalerting.util.RetryHelper;
 import com.google.api.ads.adwords.jaxws.factory.AdWordsServices;
 import com.google.api.ads.adwords.jaxws.v201603.cm.ApiException_Exception;
 import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionField;
@@ -29,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -40,10 +42,10 @@ import javax.annotation.concurrent.NotThreadSafe;
 public class AwReportDefinitionDownloader {
   private static final Logger LOGGER = LoggerFactory.getLogger(AwReportDefinitionDownloader.class);
 
-  private static final int RETRIES_COUNT = 5;
+  private static final int MAX_NUMBER_OF_ATTEMPTS = 5;
   private static final int BACKOFF_INTERVAL = 1000 * 5;
 
-  private int retriesCount = RETRIES_COUNT;
+  private int maxNumberofAttempts = MAX_NUMBER_OF_ATTEMPTS;
   private int backoffInterval = BACKOFF_INTERVAL;
 
   private final AdWordsSession session;
@@ -59,7 +61,7 @@ public class AwReportDefinitionDownloader {
   }
 
   /**
-   * Get (displayFiledName -> filedName) mapping for the specified report type.
+   * Generates (displayFiledName -> filedName) mapping for the specified report type.
    *
    * @param reportType the specified report type
    */
@@ -75,45 +77,23 @@ public class AwReportDefinitionDownloader {
   }
 
   /**
-   * For the specified report type, Download fields from ReportDefinitionService and
-   * generate (displayFiledName -> filedName) mapping.
+   * Downloads fields from ReportDefinitionService (with retry logic) and generates
+   * (displayFiledName -> filedName) mapping for the specified report type.
    *
    * @param reportType the specified report type
    */
-  private Map<String, String> generateFieldsMapping(ReportDefinitionReportType reportType)
+  private Map<String, String> generateFieldsMapping(final ReportDefinitionReportType reportType)
       throws AlertProcessingException {
-    List<ReportDefinitionField> reportDefinitionFields = null;
-    Exception lastException = null;
-    for (int i = 1; i <= this.retriesCount; ++i) {
-      try {
-        lastException = null;
-        reportDefinitionFields = downloadReportDefinitionFields(reportType);
-        break;
-      } catch (ApiException_Exception e) {
-        lastException = e;
-        LOGGER.error("(Error getting report definition: {}, cause: {}. Retry#{}/{})",
-            e, e.getCause(), i, retriesCount);
+    // Retry on downloading report definition.
+    Callable<List<ReportDefinitionField>> callable = new Callable<List<ReportDefinitionField>>() {
+      @Override
+      public List<ReportDefinitionField> call() throws AlertProcessingException {
+        return downloadReportDefinitionFields(reportType);
       }
-
-      // Slow down the rate of requests increasingly to avoid running into rate limits.
-      try {
-        // Sleep unless this was the last attempt.
-        if (i < retriesCount) {
-          long backoff = (long) Math.scalb(this.backoffInterval, i);
-          LOGGER.error("Back off for {}ms before next retry.", backoff);
-          Thread.sleep(backoff);
-        }
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new AlertProcessingException(
-            "InterruptedException occurs while waiting to retry getting report defintion", e);
-      }
-    }
-
-    if (reportDefinitionFields == null) {
-      throw new AlertProcessingException(
-          "Error getting report defintion after all retries.", lastException);
-    }
+    };
+    
+    List<ReportDefinitionField> reportDefinitionFields = RetryHelper.callsWithRetries(
+        callable, "download report definition", maxNumberofAttempts, backoffInterval, null);
 
     // Generate the fields mapping.
     LOGGER.info("Successfully downloaded report definition for {}.", reportType.value());
@@ -126,24 +106,26 @@ public class AwReportDefinitionDownloader {
   }
 
   /**
-   * Download the definition fields of the specified report type.
+   * Downloads the report definition fields of the specified report type.
    *
    * @param reportType the specified report type
    * @return the list of report definition fields
    */
   protected List<ReportDefinitionField> downloadReportDefinitionFields(
-      ReportDefinitionReportType reportType) throws ApiException_Exception {
-    ReportDefinitionServiceInterface reportDefinitionService =
-        new AdWordsServices().get(session, ReportDefinitionServiceInterface.class);
-    return reportDefinitionService.getReportFields(reportType);
+      ReportDefinitionReportType reportType) throws AlertProcessingException {
+    try {
+      ReportDefinitionServiceInterface reportDefinitionService =
+          new AdWordsServices().get(session, ReportDefinitionServiceInterface.class);
+      return reportDefinitionService.getReportFields(reportType);
+    } catch (ApiException_Exception e) {
+      throw new AlertProcessingException(
+          "ApiException_Exception occurred when downloading report definition.", e);
+    }
   }
 
-  /**
-   * For testing
-   */
   @VisibleForTesting
-  protected void setRetriesCount(int retriesCount) {
-    this.retriesCount = retriesCount;
+  protected void setMaxNumberOfAttempts(int maxNumberOfAttempts) {
+    this.maxNumberofAttempts = maxNumberOfAttempts;
   }
 
   @VisibleForTesting

@@ -50,14 +50,14 @@ public class AwReportDefinitionDownloaderTest {
     AdWordsSession session = TestEntitiesGenerator.getTestAdWordsSession();
     
     mockedAwReportDefinitionDownloader = new AwReportDefinitionDownloader(session);
-    mockedAwReportDefinitionDownloader.setRetriesCount(5);
+    mockedAwReportDefinitionDownloader.setMaxNumberOfAttempts(5);
     mockedAwReportDefinitionDownloader.setBackoffInterval(0);
 
     MockitoAnnotations.initMocks(this);
   }
 
   @Test
-  public void testGetFieldsMapping() throws ApiException_Exception, AlertProcessingException {
+  public void testGetFieldsMapping() throws AlertProcessingException {
     doReturn(new ArrayList<ReportDefinitionField>())
         .when(mockedAwReportDefinitionDownloader)
         .downloadReportDefinitionFields(Mockito.<ReportDefinitionReportType>anyObject());
@@ -70,10 +70,11 @@ public class AwReportDefinitionDownloaderTest {
   }
 
   @Test
-  public void testGetFieldsMapping_retries()
-      throws ApiException_Exception, AlertProcessingException {
-    ApiException_Exception ex = new ApiException_Exception(
+  public void testGetFieldsMapping_retries() throws AlertProcessingException {
+    ApiException_Exception apiEx = new ApiException_Exception(
         "ApiException", new com.google.api.ads.adwords.jaxws.v201603.cm.ApiException());
+    AlertProcessingException ex = new AlertProcessingException(
+        "ApiException_Exception occurred when downloading report definition.", apiEx);
     doThrow(ex)
         .when(mockedAwReportDefinitionDownloader)
         .downloadReportDefinitionFields(Mockito.<ReportDefinitionReportType>anyObject());
@@ -82,7 +83,8 @@ public class AwReportDefinitionDownloaderTest {
     try {
       mockedAwReportDefinitionDownloader.getFieldsMapping(reportType);
     } catch (AlertProcessingException e) {
-      // do nothing
+      // Do nothing when the last retry fails and throws. The verify() calls below are used to
+      // check the expected number of retries.
     }
 
     verify(mockedAwReportDefinitionDownloader, times(5)).downloadReportDefinitionFields(reportType);

@@ -18,10 +18,6 @@ package com.google.api.ads.adwords.awalerting;
  * Exception thrown when the relevant alert entity could not be processed
  */
 public class AlertProcessingException extends Exception {
-  public AlertProcessingException(String message) {
-    super(message);
-  }
-  
   public AlertProcessingException(String message, Throwable cause) {
     super(message, cause);
   }

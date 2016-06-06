@@ -203,7 +203,7 @@ public class AwAlerting {
       String line;
       while ((line = reader.readLine()) != null) {
         if (!line.startsWith("#")) {
-          String clientCustomerIdStr = line.replaceAll("-", "");
+          String clientCustomerIdStr = line.trim().replaceAll("-", "");
           Long clientCustomerId = Long.valueOf(clientCustomerIdStr);
           clientCustomerIdsSet.add(clientCustomerId);
         }
