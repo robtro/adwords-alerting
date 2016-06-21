@@ -25,7 +25,7 @@ import java.util.Set;
  * report downloader will be invoked to download report data for all relevant client customer
  * accounts.
  *
- * <p>This is the interface that every alert report downloader should inherit from. Note that every
+ * <p>This is the interface that every alert report downloader should implement. Note that every
  * implementation MUST have a constructor with a JsonObject parameter for configuration.
  *
  */

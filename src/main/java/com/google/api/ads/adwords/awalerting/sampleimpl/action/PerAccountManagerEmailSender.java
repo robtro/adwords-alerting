@@ -44,7 +44,7 @@ import java.util.Map;
  * }
  * </pre>
  */
-public class PerAccountManagerEmailSender extends AlertAction {
+public class PerAccountManagerEmailSender implements AlertAction {
   private static final Logger LOGGER = LoggerFactory.getLogger(PerAccountManagerEmailSender.class);
 
   private static final String NEWLINE = String.format("%n");
@@ -59,8 +59,6 @@ public class PerAccountManagerEmailSender extends AlertAction {
   private List<String> ccList;
   
   public PerAccountManagerEmailSender(JsonObject config) {
-    super(config);
-    
     subject = config.get(SUBJECT_TAG).getAsString();
     ccList = null;
     if (config.has(CC_TAG)) {

@@ -33,10 +33,8 @@ import java.util.Date;
  * }
  * </pre>
  */
-public class SimpleConsoleWriter extends AlertAction {
-  public SimpleConsoleWriter(JsonObject config) {
-    super(config);
-  }
+public class SimpleConsoleWriter implements AlertAction {
+  public SimpleConsoleWriter(JsonObject config) {}
 
   /**
    * Initialization action: print some header lines.

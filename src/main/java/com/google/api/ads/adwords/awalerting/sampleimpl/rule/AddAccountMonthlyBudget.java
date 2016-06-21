@@ -35,11 +35,10 @@ import java.util.Random;
  * }
  * </pre>
  */
-public class AddAccountMonthlyBudget extends AlertRule {
+public class AddAccountMonthlyBudget implements AlertRule {
   private Random random;
   
   public AddAccountMonthlyBudget(JsonObject config) {
-    super(config);
     random = new Random();
   }
 

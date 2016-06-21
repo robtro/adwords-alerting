@@ -49,7 +49,7 @@ import java.util.Date;
  * }
  * </pre>
  */
-public class SqlDbPersister extends AlertAction {
+public class SqlDbPersister implements AlertAction {
   private static final Logger LOGGER = LoggerFactory.getLogger(SqlDbPersister.class);
 
   // config keys for database connection.
@@ -89,8 +89,6 @@ public class SqlDbPersister extends AlertAction {
   private int insertionsCount;
   
   public SqlDbPersister(JsonObject config) throws ClassNotFoundException, SQLException {
-    super(config);
-    
     String driver = DEFAULT_DB_DRIVER;
     if (config.has(DB_DRIVER_TAG)) {
       driver = config.get(DB_DRIVER_TAG).getAsString();

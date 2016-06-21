@@ -37,7 +37,7 @@ import java.util.Set;
  * }
  * </pre>
  */
-public class ConvertMoneyValue extends AlertRule {
+public class ConvertMoneyValue implements AlertRule {
   private static final String MONEY_FIELD_TAG = "MoneyField";
   private static final String MONEY_FIELDS_TAG = "MoneyFields";
   private static final String DEFAULT_MONEY_FIELD = "Cost";
@@ -45,8 +45,6 @@ public class ConvertMoneyValue extends AlertRule {
   private Set<String> moneyFields;
 
   public ConvertMoneyValue(JsonObject config) {
-    super(config);
-    
     if (config.has(MONEY_FIELD_TAG) && config.has(MONEY_FIELDS_TAG)) {
       String errorMsg = String.format(
           "Error in ConvertMoneyValue constructor: cannot have both \"%s\" and \"%s\" in config.",

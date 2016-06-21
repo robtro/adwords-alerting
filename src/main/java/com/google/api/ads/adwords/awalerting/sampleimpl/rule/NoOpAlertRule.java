@@ -31,10 +31,8 @@ import java.util.List;
  * }
  * </pre>
  */
-public class NoOpAlertRule extends AlertRule {
-  public NoOpAlertRule(JsonObject config) {
-    super(config);
-  }
+public class NoOpAlertRule implements AlertRule {
+  public NoOpAlertRule(JsonObject config) {}
 
   @Override
   public List<String> newReportColumns() {

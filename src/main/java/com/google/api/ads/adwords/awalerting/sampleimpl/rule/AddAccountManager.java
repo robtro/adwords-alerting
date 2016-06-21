@@ -38,11 +38,11 @@ import java.util.Random;
  * }
  * </pre>
  */
-public class AddAccountManager extends AlertRule {
+public class AddAccountManager implements AlertRule {
   /**
    * Helper inner class for account manager.
    */
-  class AccountManager {
+  static class AccountManager {
     public String name;
     public String email;
 
@@ -56,9 +56,8 @@ public class AddAccountManager extends AlertRule {
   private List<AccountManager> accountManagers;
 
   public AddAccountManager(JsonObject config) {
-    super(config);
     random = new Random();
-    
+
     // Add sample account managers.
     accountManagers = new ArrayList<AccountManager>();
     accountManagers.add(new AccountManager("Josh G.", "josh@example.com"));

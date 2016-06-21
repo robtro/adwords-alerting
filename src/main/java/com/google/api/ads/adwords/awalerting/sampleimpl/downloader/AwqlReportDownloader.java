@@ -72,9 +72,6 @@ public class AwqlReportDownloader implements AlertReportDownloader {
 
   private final AwqlReportQuery reportQuery;
   
-  /**
-   * @param config the JsonObject for this alert report downloader configuration
-   */
   public AwqlReportDownloader(JsonObject config) {
     JsonObject reportQueryConfig = config.getAsJsonObject(REPORT_QUERY_TAG);
     this.reportQuery = new AwqlReportQuery(reportQueryConfig);

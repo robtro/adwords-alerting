@@ -28,10 +28,8 @@ import com.google.gson.JsonObject;
  * }
  * </pre>
  */
-public class NoOpAlertAction extends AlertAction {
-  public NoOpAlertAction(JsonObject config) {
-    super(config);
-  }
+public class NoOpAlertAction implements AlertAction {
+  public NoOpAlertAction(JsonObject config) {}
 
   @Override
   public void initializeAction() {}

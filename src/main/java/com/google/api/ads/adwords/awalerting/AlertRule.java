@@ -15,41 +15,37 @@
 package com.google.api.ads.adwords.awalerting;
 
 import com.google.api.ads.adwords.awalerting.report.ReportRow;
-import com.google.gson.JsonObject;
 
 import java.util.List;
 
 /**
- * This is the abstract class that every alert rule should inherit from.
+ * Alert rules are responsible for enriching / transforming / filtering report data that will be
+ * used to fire alerts.
+ *
+ * <p>This is the interface that every alert rule should implement. Note that every implementation
+ * MUST have a constructor with a JsonObject parameter for configuration.
  *
  * <p>Important note: All implementations MUST be thread-safe, as the instance will be shared
  * among multiple threads.
  */
-public abstract class AlertRule {
-  /**
-   * Constructor
-   *
-   * @param config the JsonObject for the alert rule configuration
-   */
-  public AlertRule(JsonObject config) {}
-
+public interface AlertRule {
   /**
    * Return new column names that the alert rule will extend in the report.
    */
-  public abstract List<String> newReportColumns();
+  List<String> newReportColumns();
 
   /**
    * Append new field values into the report entry.
    *
    * @param entry the report entry to append new values
    */
-  public abstract void appendReportEntryValues(ReportRow entry);
+  void appendReportEntryValues(ReportRow entry);
   
   /**
    * Modify values in the report entry.
    * @param entry the report entry to transform 
    */
-  public abstract void transformReportEntry(ReportRow entry);
+  void transformReportEntry(ReportRow entry);
 
   /**
    * Check whether a report entry should be removed from result alerts.
@@ -57,5 +53,5 @@ public abstract class AlertRule {
    * @param entry the report entry to check
    * @return whether this report entry should be removed from result alerts
    */
-  public abstract boolean shouldRemoveReportEntry(ReportRow entry);
+  boolean shouldRemoveReportEntry(ReportRow entry);
 }

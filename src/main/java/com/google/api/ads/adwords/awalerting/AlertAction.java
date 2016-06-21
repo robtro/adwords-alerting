@@ -15,23 +15,18 @@
 package com.google.api.ads.adwords.awalerting;
 
 import com.google.api.ads.adwords.awalerting.report.UnmodifiableReportRow;
-import com.google.gson.JsonObject;
 
 /**
- * This is the abstract class that every alert action should inherit from.
+ * Alert actions are responsible for firing alerts and delivering them to approperiate destinations.
+ *
+ * This is the interface that every alert action should implement. Note that every implementation
+ * MUST have a constructor with a JsonObject parameter for configuration.
  */
-public abstract class AlertAction {
-  /**
-   * Constructor
-   *
-   * @param config the JsonObject for the alert action configuration.
-   */
-  public AlertAction(JsonObject config) {}
-
+public interface AlertAction {
   /**
    * Perform initialization action before processing any report entry.
    */
-  public abstract void initializeAction() throws AlertProcessingException;
+  void initializeAction() throws AlertProcessingException;
 
   /**
    * Process a report entry. It could either perform some action here, or record some info
@@ -39,11 +34,10 @@ public abstract class AlertAction {
    *
    * @param entry the unmodifiable report entry to process.
    */
-  public abstract void processReportEntry(UnmodifiableReportRow entry)
-      throws AlertProcessingException;
+  void processReportEntry(UnmodifiableReportRow entry) throws AlertProcessingException;
 
   /**
    * Perform finalization action after processing all report entries.
    */
-  public abstract void finalizeAction() throws AlertProcessingException;
+  void finalizeAction() throws AlertProcessingException;
 }

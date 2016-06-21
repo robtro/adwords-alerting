@@ -42,7 +42,7 @@ import java.util.Date;
  * }
  * </pre>
  */
-public class SimpleLogFileWriter extends AlertAction {
+public class SimpleLogFileWriter implements AlertAction {
   private static final Logger LOGGER = LoggerFactory.getLogger(SimpleLogFileWriter.class);
 
   private static final String LOG_FILE_PATHNAME_TAG = "LogFilePathname";
@@ -56,8 +56,6 @@ public class SimpleLogFileWriter extends AlertAction {
   private BufferedWriter writer;
 
   public SimpleLogFileWriter(JsonObject config) throws IOException {
-    super(config);
-    
     filePathname = config.get(LOG_FILE_PATHNAME_TAG).getAsString();
 
     boolean appendMode = true;
