@@ -23,6 +23,7 @@ import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionReportType;
 import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionServiceInterface;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +46,7 @@ public class AwReportDefinitionDownloader {
   private static final int MAX_NUMBER_OF_ATTEMPTS = 5;
   private static final int BACKOFF_INTERVAL = 1000 * 5;
 
-  private int maxNumberofAttempts = MAX_NUMBER_OF_ATTEMPTS;
+  private int maxNumberOfAttempts = MAX_NUMBER_OF_ATTEMPTS;
   private int backoffInterval = BACKOFF_INTERVAL;
 
   private final AdWordsSession session;
@@ -93,7 +94,7 @@ public class AwReportDefinitionDownloader {
     };
     
     List<ReportDefinitionField> reportDefinitionFields = RetryHelper.callsWithRetries(
-        callable, "download report definition", maxNumberofAttempts, backoffInterval, null);
+        callable, "download report definition", maxNumberOfAttempts, backoffInterval, null);
 
     // Generate the fields mapping.
     LOGGER.info("Successfully downloaded report definition for {}.", reportType.value());
@@ -125,11 +126,13 @@ public class AwReportDefinitionDownloader {
 
   @VisibleForTesting
   protected void setMaxNumberOfAttempts(int maxNumberOfAttempts) {
-    this.maxNumberofAttempts = maxNumberOfAttempts;
+    Preconditions.checkArgument(maxNumberOfAttempts > 0, "maxNumberOfAttempts must be positive.");
+    this.maxNumberOfAttempts = maxNumberOfAttempts;
   }
 
   @VisibleForTesting
   protected void setBackoffInterval(int backoffInterval) {
+    Preconditions.checkArgument(backoffInterval >= 0, "backoffInterval must be non-negative.");
     this.backoffInterval = backoffInterval;
   }
 }

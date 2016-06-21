@@ -26,8 +26,8 @@ import com.google.api.ads.adwords.lib.utils.ReportDownloadResponseException;
 import com.google.api.ads.adwords.lib.utils.ReportException;
 import com.google.api.ads.adwords.lib.utils.v201605.DetailedReportDownloadResponseException;
 import com.google.api.ads.adwords.lib.utils.v201605.ReportDownloader;
-import com.google.api.client.util.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
@@ -47,6 +47,9 @@ public class CallableAwqlReportDownloader implements Callable<ReportData> {
 
   private static final int MAX_NUMBER_OF_ATTEMPTS = 20;
   private static final int BACKOFF_INTERVAL = 1000 * 5;
+
+  private static final ImmutableList<Class<? extends Exception>> NON_RETRIABLE_EXCEPTIONS =
+      ImmutableList.<Class<? extends Exception>>of(DetailedReportDownloadResponseException.class);
 
   private int maxNumberOfAttempts = MAX_NUMBER_OF_ATTEMPTS;
   private int backoffInterval = BACKOFF_INTERVAL;
@@ -83,11 +86,9 @@ public class CallableAwqlReportDownloader implements Callable<ReportData> {
       }
     };
 
-    ImmutableList<Class<? extends Exception>> nonRetriableExceptions =
-        ImmutableList.<Class<? extends Exception>>of(DetailedReportDownloadResponseException.class);
-    ReportDownloadResponse reportDownloadResponse = RetryHelper.callsWithRetries(
-        callable, "download report", maxNumberOfAttempts, backoffInterval, nonRetriableExceptions);
-    
+    ReportDownloadResponse reportDownloadResponse = RetryHelper.callsWithRetries(callable,
+        "download report", maxNumberOfAttempts, backoffInterval, NON_RETRIABLE_EXCEPTIONS);
+
     InputStream inputStream = reportDownloadResponse.getInputStream();
     return handleReportStreamResult(inputStream);
   }
@@ -134,20 +135,23 @@ public class CallableAwqlReportDownloader implements Callable<ReportData> {
       gzipReportStream.close();
       return result;
     } catch (IOException e) {
-      LOGGER.error(
-          "Error when unzipping and loading the {} of account {}.",
+      String errorMsg = String.format(
+          "Error when unzipping and loading the %s of account %s from stream.",
           reportQuery.getReportType(), session.getClientCustomerId());
-      throw new AlertProcessingException("Failed to load report data from stream.", e);
+      LOGGER.error(errorMsg);
+      throw new AlertProcessingException(errorMsg, e);
     }
   }
   
   @VisibleForTesting
   protected void setMaxNumberOfAttempts(int maxNumberOfAttempts) {
+    Preconditions.checkArgument(maxNumberOfAttempts > 0, "maxNumberOfAttempts must be positive.");
     this.maxNumberOfAttempts = maxNumberOfAttempts;
   }
 
   @VisibleForTesting
   protected void setBackoffInterval(int backoffInterval) {
+    Preconditions.checkArgument(backoffInterval >= 0, "backoffInterval must be non-negative.");
     this.backoffInterval = backoffInterval;
   }
 }
