@@ -22,7 +22,7 @@ import com.google.api.ads.adwords.awalerting.report.ReportData;
 import com.google.api.ads.adwords.awalerting.report.ReportDataLoader;
 import com.google.api.ads.adwords.awalerting.sampleimpl.action.NoOpAlertAction;
 import com.google.api.ads.adwords.awalerting.sampleimpl.rule.NoOpAlertRule;
-import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionReportType;
+import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionReportType;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
 import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.api.ads.common.lib.exception.ValidationException;

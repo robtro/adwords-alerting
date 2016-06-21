@@ -14,7 +14,7 @@
 
 package com.google.api.ads.adwords.awalerting.report;
 
-import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionReportType;
+import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionReportType;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 

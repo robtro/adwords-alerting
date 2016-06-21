@@ -17,10 +17,10 @@ package com.google.api.ads.adwords.awalerting.sampleimpl.downloader;
 import com.google.api.ads.adwords.awalerting.AlertProcessingException;
 import com.google.api.ads.adwords.awalerting.util.RetryHelper;
 import com.google.api.ads.adwords.jaxws.factory.AdWordsServices;
-import com.google.api.ads.adwords.jaxws.v201603.cm.ApiException_Exception;
-import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionField;
-import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionReportType;
-import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionServiceInterface;
+import com.google.api.ads.adwords.jaxws.v201605.cm.ApiException_Exception;
+import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionField;
+import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionReportType;
+import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionServiceInterface;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
 import com.google.common.annotations.VisibleForTesting;
 

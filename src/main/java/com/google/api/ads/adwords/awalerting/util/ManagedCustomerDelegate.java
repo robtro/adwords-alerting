@@ -15,14 +15,14 @@
 package com.google.api.ads.adwords.awalerting.util;
 
 import com.google.api.ads.adwords.jaxws.factory.AdWordsServices;
-import com.google.api.ads.adwords.jaxws.utils.v201603.SelectorBuilder;
-import com.google.api.ads.adwords.jaxws.v201603.cm.Selector;
-import com.google.api.ads.adwords.jaxws.v201603.mcm.ApiException;
-import com.google.api.ads.adwords.jaxws.v201603.mcm.ManagedCustomer;
-import com.google.api.ads.adwords.jaxws.v201603.mcm.ManagedCustomerPage;
-import com.google.api.ads.adwords.jaxws.v201603.mcm.ManagedCustomerServiceInterface;
+import com.google.api.ads.adwords.jaxws.utils.v201605.SelectorBuilder;
+import com.google.api.ads.adwords.jaxws.v201605.cm.Selector;
+import com.google.api.ads.adwords.jaxws.v201605.mcm.ApiException;
+import com.google.api.ads.adwords.jaxws.v201605.mcm.ManagedCustomer;
+import com.google.api.ads.adwords.jaxws.v201605.mcm.ManagedCustomerPage;
+import com.google.api.ads.adwords.jaxws.v201605.mcm.ManagedCustomerServiceInterface;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
-import com.google.api.ads.adwords.lib.selectorfields.v201603.cm.ManagedCustomerField;
+import com.google.api.ads.adwords.lib.selectorfields.v201605.cm.ManagedCustomerField;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

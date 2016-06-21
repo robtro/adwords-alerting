@@ -11,7 +11,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <com.google.api-ads.version>2.12.0</com.google.api-ads.version>
+    <com.google.api-ads.version>2.15.0</com.google.api-ads.version>
     <springframework.version>3.2.2.RELEASE</springframework.version>
   </properties>
 

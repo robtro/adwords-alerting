@@ -21,9 +21,9 @@ import static org.mockito.Mockito.verify;
 
 import com.google.api.ads.adwords.awalerting.AlertProcessingException;
 import com.google.api.ads.adwords.awalerting.util.TestEntitiesGenerator;
-import com.google.api.ads.adwords.jaxws.v201603.cm.ApiException_Exception;
-import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionField;
-import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionReportType;
+import com.google.api.ads.adwords.jaxws.v201605.cm.ApiException_Exception;
+import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionField;
+import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionReportType;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
 import com.google.api.ads.common.lib.exception.ValidationException;
 
@@ -72,7 +72,7 @@ public class AwReportDefinitionDownloaderTest {
   @Test
   public void testGetFieldsMapping_retries() throws AlertProcessingException {
     ApiException_Exception apiEx = new ApiException_Exception(
-        "ApiException", new com.google.api.ads.adwords.jaxws.v201603.cm.ApiException());
+        "ApiException", new com.google.api.ads.adwords.jaxws.v201605.cm.ApiException());
     AlertProcessingException ex = new AlertProcessingException(
         "ApiException_Exception occurred when downloading report definition.", apiEx);
     doThrow(ex)

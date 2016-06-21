@@ -19,7 +19,7 @@ import com.google.api.ads.adwords.awalerting.AlertReportDownloader;
 import com.google.api.ads.adwords.awalerting.report.AwqlReportQuery;
 import com.google.api.ads.adwords.awalerting.report.ReportData;
 import com.google.api.ads.adwords.awalerting.report.ReportDataLoader;
-import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionReportType;
+import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionReportType;
 import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.api.ads.common.lib.exception.ValidationException;
 import com.google.common.base.Joiner;

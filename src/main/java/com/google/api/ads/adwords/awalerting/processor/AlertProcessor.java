@@ -20,7 +20,7 @@ import com.google.api.ads.adwords.awalerting.authentication.Authenticator;
 import com.google.api.ads.adwords.awalerting.report.ReportData;
 import com.google.api.ads.adwords.awalerting.util.ConfigTags;
 import com.google.api.ads.adwords.awalerting.util.ManagedCustomerDelegate;
-import com.google.api.ads.adwords.jaxws.v201603.mcm.ApiException;
+import com.google.api.ads.adwords.jaxws.v201605.mcm.ApiException;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
 import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.api.ads.common.lib.exception.OAuthException;

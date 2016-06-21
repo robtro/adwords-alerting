@@ -17,7 +17,7 @@ package com.google.api.ads.adwords.awalerting.report;
 import static org.junit.Assert.assertEquals;
 
 import com.google.api.ads.adwords.awalerting.util.TestEntitiesGenerator;
-import com.google.api.ads.adwords.jaxws.v201603.cm.ReportDefinitionReportType;
+import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionReportType;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;

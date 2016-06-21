@@ -25,7 +25,7 @@ import com.google.api.ads.adwords.awalerting.report.ReportDataLoader;
 import com.google.api.ads.adwords.awalerting.util.TestEntitiesGenerator;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
 import com.google.api.ads.adwords.lib.utils.ReportException;
-import com.google.api.ads.adwords.lib.utils.v201603.DetailedReportDownloadResponseException;
+import com.google.api.ads.adwords.lib.utils.v201605.DetailedReportDownloadResponseException;
 import com.google.api.ads.common.lib.exception.ValidationException;
 import com.google.gson.JsonObject;
 
