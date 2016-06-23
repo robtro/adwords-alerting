@@ -145,11 +145,9 @@ public class PerAccountManagerEmailSender implements AlertAction {
       sb.append(NEWLINE);
       sb.append(NEWLINE);
 
-      sb.append("From: " + from);
-      sb.append(NEWLINE);
-
-      sb.append("To: " + to);
-      sb.append(NEWLINE);
+      sb.append("From: ").append(from).append(NEWLINE);
+      sb.append("To: ").append(to).append(NEWLINE);
+      sb.append("Subject: ").append(subject).append(NEWLINE);
 
       if (ccList != null && !ccList.isEmpty()) {
         boolean firstCc = true;
