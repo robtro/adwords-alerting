@@ -14,9 +14,8 @@
 
 package com.google.api.ads.adwords.awalerting.util;
 
-import com.google.api.ads.adwords.lib.jaxb.v201605.ReportDefinitionDateRangeType;
+import com.google.api.ads.adwords.lib.jaxb.v201705.ReportDefinitionDateRangeType;
 import com.google.api.client.util.Preconditions;
-
 import org.joda.time.LocalDate;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;

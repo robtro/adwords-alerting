@@ -16,23 +16,20 @@ package com.google.api.ads.adwords.awalerting.sampleimpl.action;
 
 import com.google.api.ads.adwords.awalerting.AlertAction;
 import com.google.api.ads.adwords.awalerting.AlertProcessingException;
-import com.google.api.ads.adwords.awalerting.report.ReportRow;
 import com.google.api.ads.adwords.awalerting.report.UnmodifiableReportRow;
-import com.google.common.base.Preconditions;
+import com.google.api.ads.adwords.awalerting.util.JdbcUtil;
+import com.google.api.client.util.Lists;
 import com.google.gson.JsonObject;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.sql.Connection;
 import java.sql.DatabaseMetaData;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.List;
+import javax.annotation.concurrent.NotThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * An alert action implementation that persists alert messages into database.
@@ -49,6 +46,7 @@ import java.util.Date;
  * }
  * </pre>
  */
+@NotThreadSafe
 public class SqlDbPersister implements AlertAction {
   private static final Logger LOGGER = LoggerFactory.getLogger(SqlDbPersister.class);
 
@@ -59,9 +57,7 @@ public class SqlDbPersister implements AlertAction {
   private static final String DB_PASSWORD_TAG = "Password"; // optional
 
   // default values.
-  private static final String DEFAULT_DB_DRIVER = "com.mysql.jdbc.Driver";
   private static final int BATCH_INSERTION_SIZE = 100; // number of insertions in a batch
-
   private static final String DB_SCHEMA_NAME = "AWAlerting";
   private static final String DB_TABLE_NAME = "AW_Alerts";
   
@@ -83,40 +79,18 @@ public class SqlDbPersister implements AlertAction {
       + " ALERT_MESSAGE)"
       + " VALUES (?, ?, ?, ?, ?, ?)";
   
-  private Connection dbConnection;
-  private PreparedStatement preparedStatement;
   private int batchedInsertions;
   private int insertionsCount;
   
-  public SqlDbPersister(JsonObject config) throws ClassNotFoundException, SQLException {
-    String driver = DEFAULT_DB_DRIVER;
-    if (config.has(DB_DRIVER_TAG)) {
-      driver = config.get(DB_DRIVER_TAG).getAsString();
-    }
-
-    Preconditions.checkArgument(
-        config.has(DB_URL_TAG), "Missing compulsory property: %s", DB_URL_TAG);
-    String url = config.get(DB_URL_TAG).getAsString();
-
-    String login = null;
-    if (config.has(DB_LOGIN_TAG)) {
-      login = config.get(DB_LOGIN_TAG).getAsString();
-    }
-
-    String password = null;
-    if (config.has(DB_PASSWORD_TAG)) {
-      password = config.get(DB_PASSWORD_TAG).getAsString();
-    }
-
-    // Register driver.
-    Class.forName(driver);
-
-    // Open a DB connection.
-    if (login == null && password == null) {
-      dbConnection = DriverManager.getConnection(url);
-    } else {
-      dbConnection = DriverManager.getConnection(url, login, password);
-    }
+  private final JdbcTemplate jdbcTemplate;
+  private final List<Object[]> batchArgs;
+  
+  public SqlDbPersister(JsonObject config) {
+    jdbcTemplate =
+        JdbcUtil.createJdbcTemplate(
+            config, DB_DRIVER_TAG, DB_URL_TAG, DB_LOGIN_TAG, DB_PASSWORD_TAG);
+    
+    batchArgs = Lists.newArrayList();
   }
 
   /**
@@ -129,20 +103,12 @@ public class SqlDbPersister implements AlertAction {
 
     try {
       // Check if table already exists, if not create it.
-      DatabaseMetaData metaData = dbConnection.getMetaData();
+      DatabaseMetaData metaData = jdbcTemplate.getDataSource().getConnection().getMetaData();
       ResultSet result = metaData.getTables(null, DB_SCHEMA_NAME, DB_TABLE_NAME, null);
       if (!result.next()) {
-        Statement statement = dbConnection.createStatement();
-        LOGGER.info(CREATE_TABLE_SQL);
-        statement.executeUpdate(CREATE_TABLE_SQL);
-        statement.close();
+        LOGGER.info("Creating the table {}.{} in database.", DB_SCHEMA_NAME, DB_TABLE_NAME);
+        jdbcTemplate.execute(CREATE_TABLE_SQL);
       }
-
-      // Create prepared statement.
-      preparedStatement = dbConnection.prepareStatement(INSERT_ALERT_SQL);
-
-      // Enable batch insertion.
-      dbConnection.setAutoCommit(false);
     } catch (SQLException e) {
       throw new AlertProcessingException("Error invoking SQLDBPersister.initializeAction().", e);
     }
@@ -154,86 +120,53 @@ public class SqlDbPersister implements AlertAction {
    * @param entry the report entry to process
    */
   @Override
-  public void processReportEntry(UnmodifiableReportRow entry) throws AlertProcessingException {
-    try {
-      prepareStatement(entry);
-      insertStatement();
-    } catch (SQLException e) {
-      throw new AlertProcessingException("Error invoking SQLDBPersister.processReportEntry().", e);
-    }
-  }
-
-  /**
-   * Prepare the report entry for batch insertion.
-   *
-   * @param entry the report entry to process
-   */
-  private void prepareStatement(ReportRow entry) throws SQLException {
-    preparedStatement.setTimestamp(1, new Timestamp(new Date().getTime()));
-
+  public void processReportEntry(UnmodifiableReportRow entry) {
+    Timestamp timestamp = new Timestamp(new Date().getTime());
+    
     String clientCustomerIdStr = entry.getFieldValue("ExternalCustomerId");
+    Long clientCustomerId = null;
     if (clientCustomerIdStr != null) {
-      long clientCustomerId = Long.parseLong(clientCustomerIdStr.replaceAll("-", ""));
-      preparedStatement.setLong(2, clientCustomerId);
+      clientCustomerId = Long.valueOf(clientCustomerIdStr.replaceAll("-", ""));
     }
-
+    
     String accountName = entry.getFieldValue("AccountDescriptiveName");
-    if (accountName != null) {
-      preparedStatement.setString(3, accountName);
-    }
-
     String accountManagerName = entry.getFieldValue("AccountManagerName");
-    if (accountManagerName != null) {
-      preparedStatement.setString(4, accountManagerName);
-    }
-
     String accountManagerEmail = entry.getFieldValue("AccountManagerEmail");
-    if (accountManagerEmail != null) {
-      preparedStatement.setString(5, accountManagerEmail);
-    }
-
     String alertMessage = entry.getFieldValue("AlertMessage");
-    preparedStatement.setString(6, alertMessage);
-  }
-
-  /**
-   * Add the statement into batch insertion, and commit if batch is ready.
-   */
-  private void insertStatement() throws SQLException {
-    preparedStatement.addBatch();
+    
+    batchArgs.add(
+        new Object[] {
+          timestamp,
+          clientCustomerId,
+          accountName,
+          accountManagerName,
+          accountManagerEmail,
+          alertMessage
+        });
     insertionsCount++;
     if (batchedInsertions++ >= BATCH_INSERTION_SIZE) {
-      commitInsertions();
+      commitBatch();
     }
-  }
-
-  /**
-   * Finalization action: execute reminder batch insertions, then close statement and database
-   * connection.
-   */
-  @Override
-  public void finalizeAction() throws AlertProcessingException {
-    try {
-      if (batchedInsertions > 0) {
-        commitInsertions();
-      }
-
-      // Close statement and database connection.
-      preparedStatement.close();
-      dbConnection.close();
-    } catch (SQLException e) {
-      throw new AlertProcessingException("Error invoking SQLDBPersister.finalizeAction().", e);
-    }
-
-    LOGGER.info("Inserted {} alert records into the database.", insertionsCount);
   }
   
   /**
-   * Commit the insertion statements in batch.
+   * Commit the batch of insertions.
    */
-  private void commitInsertions() throws SQLException {
-    preparedStatement.executeBatch();
-    dbConnection.commit();
+  private void commitBatch() {
+    jdbcTemplate.batchUpdate(INSERT_ALERT_SQL, batchArgs);
     batchedInsertions = 0;
+    batchArgs.clear();
+  }
+
+  /**
+   * Finalization action: execute reminder batch insertions.
+   */
+  @Override
+  public void finalizeAction() {
+    if (batchedInsertions > 0) {
+      commitBatch();
+    }
+
+    LOGGER.info("Inserted {} alert records into the database.", insertionsCount);
   }
 }

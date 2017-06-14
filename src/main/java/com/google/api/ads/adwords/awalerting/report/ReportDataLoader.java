@@ -14,14 +14,13 @@
 
 package com.google.api.ads.adwords.awalerting.report;
 
-import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionReportType;
-import com.google.common.base.Preconditions;
-
 import au.com.bytecode.opencsv.CSVReader;
-
+import com.google.api.ads.adwords.jaxws.v201705.cm.ReportDefinitionReportType;
+import com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -32,18 +31,18 @@ import java.util.Map;
  */
 public class ReportDataLoader {
   private final ReportDefinitionReportType reportType;
-  
+
   /**
    * The (displayFieldName -> fieldName) mapping.
    */
   private final Map<String, String> fieldsMapping;
-  
+
   public ReportDataLoader(
       ReportDefinitionReportType reportType, Map<String, String> fieldsMapping) {
     this.reportType = reportType;
     this.fieldsMapping = fieldsMapping;
   }
-  
+
   /**
    * Generate ReportData from an input stream (normally an HTTP steam of report in CSV format),
    * which will be closed after reading.
@@ -52,12 +51,11 @@ public class ReportDataLoader {
    * @return the generated ReportData
    */
   public ReportData fromStream(InputStream stream, Long clientCustomerId) throws IOException {
-    CSVReader csvReader = new CSVReader(new InputStreamReader(stream));
+    CSVReader csvReader = new CSVReader(new InputStreamReader(stream, Charset.defaultCharset()));
     String[] headerArray = csvReader.readNext();
-    @SuppressWarnings("unchecked")  // [google3 is using low version of opencsv lib] MOE:strip_line
     List<String[]> rowsArray = csvReader.readAll();
     csvReader.close();
-    
+
     int rowsCount = rowsArray.size();
     List<List<String>> rows = new ArrayList<List<String>>(rowsCount);
     for (int i = 0; i < rowsCount; ++i) {
@@ -73,7 +71,7 @@ public class ReportDataLoader {
       Preconditions.checkNotNull(fieldName, "Unknown field name: %s.", fieldName);
       columnNames.add(fieldName);
     }
-    
+
     return new ReportData(clientCustomerId, reportType, columnNames, rows);
   }
 }

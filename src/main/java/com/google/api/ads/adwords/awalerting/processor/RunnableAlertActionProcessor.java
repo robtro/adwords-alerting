@@ -49,7 +49,6 @@ public class RunnableAlertActionProcessor implements Runnable {
     this.reports = reports;
   }
 
-
   /**
    * Executes the API call to run alert actions on the report that was given when this
    * {@code Runnable} was created.

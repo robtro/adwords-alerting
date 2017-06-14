@@ -14,10 +14,9 @@
 
 package com.google.api.ads.adwords.awalerting.report;
 
-import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionReportType;
+import com.google.api.ads.adwords.jaxws.v201705.cm.ReportDefinitionReportType;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;

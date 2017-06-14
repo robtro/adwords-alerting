@@ -14,24 +14,20 @@
 
 package com.google.api.ads.adwords.awalerting.util;
 
-import com.google.api.ads.adwords.jaxws.factory.AdWordsServices;
-import com.google.api.ads.adwords.jaxws.utils.v201605.SelectorBuilder;
-import com.google.api.ads.adwords.jaxws.v201605.cm.Selector;
-import com.google.api.ads.adwords.jaxws.v201605.mcm.ApiException;
-import com.google.api.ads.adwords.jaxws.v201605.mcm.ManagedCustomer;
-import com.google.api.ads.adwords.jaxws.v201605.mcm.ManagedCustomerPage;
-import com.google.api.ads.adwords.jaxws.v201605.mcm.ManagedCustomerServiceInterface;
+import com.google.api.ads.adwords.jaxws.utils.v201705.SelectorBuilder;
+import com.google.api.ads.adwords.jaxws.v201705.cm.Selector;
+import com.google.api.ads.adwords.jaxws.v201705.mcm.ApiException;
+import com.google.api.ads.adwords.jaxws.v201705.mcm.ManagedCustomer;
+import com.google.api.ads.adwords.jaxws.v201705.mcm.ManagedCustomerPage;
+import com.google.api.ads.adwords.jaxws.v201705.mcm.ManagedCustomerServiceInterface;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
-import com.google.api.ads.adwords.lib.selectorfields.v201605.cm.ManagedCustomerField;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.google.api.ads.adwords.lib.selectorfields.v201609.cm.ManagedCustomerField;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-
 import javax.annotation.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@code ManagedCustomerDelegate} encapsulates the {@code ManagedCustomerServiceInterface}.
@@ -53,7 +49,7 @@ public class ManagedCustomerDelegate {
    */
   public ManagedCustomerDelegate(AdWordsSession adWordsSession) {
     this.managedCustomerService =
-        new AdWordsServices().get(adWordsSession, ManagedCustomerServiceInterface.class);
+        AdWordsServicesUtil.getService(adWordsSession, ManagedCustomerServiceInterface.class);
   }
 
   /**
@@ -97,7 +93,6 @@ public class ManagedCustomerDelegate {
 
     return clientCustomerIdsSet;
   }
-
 
   /**
    * Add client customer IDs into the result set.

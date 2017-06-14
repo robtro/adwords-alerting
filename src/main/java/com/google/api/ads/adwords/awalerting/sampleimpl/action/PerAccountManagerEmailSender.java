@@ -34,7 +34,7 @@ import java.util.Map;
 
 /**
  * An alert action implementation that creates alert emails, one for each account manager.
- * 
+ *
  * <p>The JSON config should look like:
  * <pre>
  * {
@@ -52,12 +52,12 @@ public class PerAccountManagerEmailSender implements AlertAction {
 
   private static final String SUBJECT_TAG = "Subject";
   private static final String CC_TAG = "CC";
-  
+
   // Each email for one receiver (account manager)
   private Map<String, AlertEmail> emailsMap;
   private String subject;
   private List<String> ccList;
-  
+
   public PerAccountManagerEmailSender(JsonObject config) {
     subject = config.get(SUBJECT_TAG).getAsString();
     ccList = null;
@@ -76,7 +76,7 @@ public class PerAccountManagerEmailSender implements AlertAction {
 
   /**
    * Process a report entry, and put the alert message in the corresponding alert email object.
-   * 
+   *
    * @param entry the report entry to process
    */
   @Override
@@ -106,7 +106,7 @@ public class PerAccountManagerEmailSender implements AlertAction {
     }
     LOGGER.info(sb.toString());
   }
-  
+
   /**
    * Helper inner class for alert email.
    */
@@ -138,8 +138,8 @@ public class PerAccountManagerEmailSender implements AlertAction {
      * @return formatted email printout
      */
     public StringBuffer print(String subject, String from, List<String> ccList) {
-      // TODO(zhuoc): use template to format the email message.
-      
+      // TODO(user): use template to format the email message.
+
       StringBuffer sb = new StringBuffer(NEWLINE);
       sb.append("===== Alert email starts =====");
       sb.append(NEWLINE);

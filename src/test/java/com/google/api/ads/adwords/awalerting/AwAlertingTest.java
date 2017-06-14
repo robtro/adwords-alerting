@@ -19,12 +19,10 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.google.api.ads.adwords.awalerting.util.TestEntitiesGenerator;
-
+import java.util.Set;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-
-import java.util.Set;
 
 /**
  * Test case for the {@link AwAlerting} class.
@@ -35,11 +33,11 @@ public class AwAlertingTest {
    * Test the file reading feature, and that the account IDs are properly added to the given set.
    */
   @Test
-  public void testAddAccountFromFile() throws AlertConfigLoadException {    
+  public void testAddAccountFromFile() throws AlertConfigLoadException {
     Set<Long> clientCustomerIds =
         AwAlerting.getAccountsFromStream(TestEntitiesGenerator.getTestAccountsStream());
     assertEquals(
-        "Verify number of client customer IDs loaded from file.", clientCustomerIds.size(), 5);
+        "Verify number of client customer IDs loaded from file.", 5, clientCustomerIds.size());
 
     final String errorMsg = "Verify the specific acocunt ID is loaded.";
     assertTrue(errorMsg, clientCustomerIds.contains(1235431234L));

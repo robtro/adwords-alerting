@@ -18,7 +18,6 @@ import static org.junit.Assert.assertEquals;
 
 import com.google.api.ads.adwords.awalerting.util.TestEntitiesGenerator;
 import com.google.gson.JsonObject;
-
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -41,33 +40,30 @@ public class AwqlReportQueryTest {
                             + "FROM ACCOUNT_PERFORMANCE_REPORT "
                             + "WHERE Impressions > 100 "
                             + "DURING THIS_MONTH";
-    
-    assertEquals("Verify report type of case 1",
-                 reportQuery1.getReportType(), "ACCOUNT_PERFORMANCE_REPORT");
-    assertEquals("Verify AWQL query of case 1",
-                 reportQuery1.generateAWQL(), expectedAwqlStr1);
-                          
+
+    assertEquals(
+        "Verify report type of case 1", "ACCOUNT_PERFORMANCE_REPORT", reportQuery1.getReportType());
+    assertEquals("Verify AWQL query of case 1", expectedAwqlStr1, reportQuery1.generateAWQL());
+
     // Test AWQL query without "WHERE" clause
     jsonConfig.remove("Conditions");
     AwqlReportQuery reportQuery2 = new AwqlReportQuery(jsonConfig);
     String expectedAwqlStr2 = "SELECT ExternalCustomerId,AccountDescriptiveName,Cost "
                             + "FROM ACCOUNT_PERFORMANCE_REPORT "
                             + "DURING THIS_MONTH";
-    
-    assertEquals("Verify report type of case 2",
-                 reportQuery2.getReportType(), "ACCOUNT_PERFORMANCE_REPORT");
-    assertEquals("Verify AWQL query of case 2",
-                 reportQuery2.generateAWQL(), expectedAwqlStr2);
-    
+
+    assertEquals(
+        "Verify report type of case 2", "ACCOUNT_PERFORMANCE_REPORT", reportQuery2.getReportType());
+    assertEquals("Verify AWQL query of case 2", expectedAwqlStr2, reportQuery2.generateAWQL());
+
     // Test AWQL query without "DURING" clause
     jsonConfig.remove("DateRange");
     AwqlReportQuery reportQuery3 = new AwqlReportQuery(jsonConfig);
     String expectedAwqlStr3 = "SELECT ExternalCustomerId,AccountDescriptiveName,Cost "
                             + "FROM ACCOUNT_PERFORMANCE_REPORT";
-    
-    assertEquals("Verify report type of case 3",
-                 reportQuery3.getReportType(), "ACCOUNT_PERFORMANCE_REPORT");
-    assertEquals("Verify AWQL query of case 3",
-                 reportQuery3.generateAWQL(), expectedAwqlStr3);
+
+    assertEquals(
+        "Verify report type of case 3", "ACCOUNT_PERFORMANCE_REPORT", reportQuery3.getReportType());
+    assertEquals("Verify AWQL query of case 3", expectedAwqlStr3, reportQuery3.generateAWQL());
   }
 }

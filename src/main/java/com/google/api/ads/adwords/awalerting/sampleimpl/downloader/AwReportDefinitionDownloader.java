@@ -15,25 +15,19 @@
 package com.google.api.ads.adwords.awalerting.sampleimpl.downloader;
 
 import com.google.api.ads.adwords.awalerting.AlertProcessingException;
-import com.google.api.ads.adwords.awalerting.util.RetryHelper;
-import com.google.api.ads.adwords.jaxws.factory.AdWordsServices;
-import com.google.api.ads.adwords.jaxws.v201605.cm.ApiException_Exception;
-import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionField;
-import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionReportType;
-import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionServiceInterface;
+import com.google.api.ads.adwords.awalerting.util.AdWordsServicesUtil;
+import com.google.api.ads.adwords.jaxws.v201705.cm.ApiException_Exception;
+import com.google.api.ads.adwords.jaxws.v201705.cm.ReportDefinitionField;
+import com.google.api.ads.adwords.jaxws.v201705.cm.ReportDefinitionReportType;
+import com.google.api.ads.adwords.jaxws.v201705.cm.ReportDefinitionServiceInterface;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-
 import javax.annotation.concurrent.NotThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class to download report definition and generate (displayFiledName -> filedName) mapping
@@ -42,12 +36,6 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class AwReportDefinitionDownloader {
   private static final Logger LOGGER = LoggerFactory.getLogger(AwReportDefinitionDownloader.class);
-
-  private static final int MAX_NUMBER_OF_ATTEMPTS = 5;
-  private static final int BACKOFF_INTERVAL = 1000 * 5;
-
-  private int maxNumberOfAttempts = MAX_NUMBER_OF_ATTEMPTS;
-  private int backoffInterval = BACKOFF_INTERVAL;
 
   private final AdWordsSession session;
 
@@ -83,18 +71,19 @@ public class AwReportDefinitionDownloader {
    *
    * @param reportType the specified report type
    */
-  private Map<String, String> generateFieldsMapping(final ReportDefinitionReportType reportType)
+  @VisibleForTesting
+  Map<String, String> generateFieldsMapping(final ReportDefinitionReportType reportType)
       throws AlertProcessingException {
-    // Retry on downloading report definition.
-    Callable<List<ReportDefinitionField>> callable = new Callable<List<ReportDefinitionField>>() {
-      @Override
-      public List<ReportDefinitionField> call() throws AlertProcessingException {
-        return downloadReportDefinitionFields(reportType);
-      }
-    };
+    ReportDefinitionServiceInterface reportDefinitionService =
+        AdWordsServicesUtil.getService(session, ReportDefinitionServiceInterface.class);
     
-    List<ReportDefinitionField> reportDefinitionFields = RetryHelper.callsWithRetries(
-        callable, "download report definition", maxNumberOfAttempts, backoffInterval, null);
+    List<ReportDefinitionField> reportDefinitionFields = null;
+    try {
+      reportDefinitionFields = reportDefinitionService.getReportFields(reportType);
+    } catch (ApiException_Exception e) {
+      throw new AlertProcessingException(
+          "ApiException_Exception occurred when downloading report definition.", e);
+    }
 
     // Generate the fields mapping.
     LOGGER.info("Successfully downloaded report definition for {}.", reportType.value());
@@ -104,35 +93,5 @@ public class AwReportDefinitionDownloader {
     }
 
     return fieldsMapping;
-  }
-
-  /**
-   * Downloads the report definition fields of the specified report type.
-   *
-   * @param reportType the specified report type
-   * @return the list of report definition fields
-   */
-  protected List<ReportDefinitionField> downloadReportDefinitionFields(
-      ReportDefinitionReportType reportType) throws AlertProcessingException {
-    try {
-      ReportDefinitionServiceInterface reportDefinitionService =
-          new AdWordsServices().get(session, ReportDefinitionServiceInterface.class);
-      return reportDefinitionService.getReportFields(reportType);
-    } catch (ApiException_Exception e) {
-      throw new AlertProcessingException(
-          "ApiException_Exception occurred when downloading report definition.", e);
-    }
-  }
-
-  @VisibleForTesting
-  protected void setMaxNumberOfAttempts(int maxNumberOfAttempts) {
-    Preconditions.checkArgument(maxNumberOfAttempts > 0, "maxNumberOfAttempts must be positive.");
-    this.maxNumberOfAttempts = maxNumberOfAttempts;
-  }
-
-  @VisibleForTesting
-  protected void setBackoffInterval(int backoffInterval) {
-    Preconditions.checkArgument(backoffInterval >= 0, "backoffInterval must be non-negative.");
-    this.backoffInterval = backoffInterval;
   }
 }

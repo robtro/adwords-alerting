@@ -17,13 +17,11 @@ package com.google.api.ads.adwords.awalerting.report;
 import static org.junit.Assert.assertEquals;
 
 import com.google.api.ads.adwords.awalerting.util.TestEntitiesGenerator;
-import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionReportType;
-
+import com.google.api.ads.adwords.jaxws.v201705.cm.ReportDefinitionReportType;
+import java.util.List;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-
-import java.util.List;
 
 /**
  * Test case for the {@link ReportData} class.
@@ -38,9 +36,11 @@ public class ReportDataTest {
   public void testLoadReportData() throws Exception {
     ReportData report = TestEntitiesGenerator.getTestReportData();
 
-    assertEquals("Verify the report type",
-        report.getReportType(), ReportDefinitionReportType.ACCOUNT_PERFORMANCE_REPORT);
-    
+    assertEquals(
+        "Verify the report type",
+        ReportDefinitionReportType.ACCOUNT_PERFORMANCE_REPORT,
+        report.getReportType());
+
     // Check index mappings
     int idxExternalCustomerId = report.getColumnIndex("ExternalCustomerId");
     int idxDate = report.getColumnIndex("Date");
@@ -52,40 +52,40 @@ public class ReportDataTest {
     int idxCtr = report.getColumnIndex("Ctr");
     
     final String assertMsgColumnIndex = "Verify the report column's index";
-    assertEquals(assertMsgColumnIndex, idxExternalCustomerId, 0);
-    assertEquals(assertMsgColumnIndex, idxDate, 1);
-    assertEquals(assertMsgColumnIndex, idxAccountDescriptiveName, 2);
-    assertEquals(assertMsgColumnIndex, idxCost, 3);
-    assertEquals(assertMsgColumnIndex, idxClicks, 4);
-    assertEquals(assertMsgColumnIndex, idxImpressions, 5);
-    assertEquals(assertMsgColumnIndex, idxConvertedClicks, 6);
-    assertEquals(assertMsgColumnIndex, idxCtr, 7);
-    
+    assertEquals(assertMsgColumnIndex, 0, idxExternalCustomerId);
+    assertEquals(assertMsgColumnIndex, 1, idxDate);
+    assertEquals(assertMsgColumnIndex, 2, idxAccountDescriptiveName);
+    assertEquals(assertMsgColumnIndex, 3, idxCost);
+    assertEquals(assertMsgColumnIndex, 4, idxClicks);
+    assertEquals(assertMsgColumnIndex, 5, idxImpressions);
+    assertEquals(assertMsgColumnIndex, 6, idxConvertedClicks);
+    assertEquals(assertMsgColumnIndex, 7, idxCtr);
+
     int rowsCount = report.getRows().size();
-    assertEquals("Verify number of rows in report", rowsCount, 7);
-    
+    assertEquals("Verify number of rows in report", 7, rowsCount);
+
     // Check first entry
     List<String> firstRow = report.getRow(0);
     final String assertMsgFirstRow = "Verify data in the first row";
-    assertEquals(assertMsgFirstRow, firstRow.get(idxExternalCustomerId), "1232198123");
-    assertEquals(assertMsgFirstRow, firstRow.get(idxDate), "2013-05-01");
-    assertEquals(assertMsgFirstRow, firstRow.get(idxAccountDescriptiveName), "Le Test");
-    assertEquals(assertMsgFirstRow, firstRow.get(idxCost), "1420000");
-    assertEquals(assertMsgFirstRow, firstRow.get(idxClicks), "10");
-    assertEquals(assertMsgFirstRow, firstRow.get(idxImpressions), "1978");
-    assertEquals(assertMsgFirstRow, firstRow.get(idxConvertedClicks), "0");
-    assertEquals(assertMsgFirstRow, firstRow.get(idxCtr), "0.51%");
+    assertEquals(assertMsgFirstRow, "1232198123", firstRow.get(idxExternalCustomerId));
+    assertEquals(assertMsgFirstRow, "2013-05-01", firstRow.get(idxDate));
+    assertEquals(assertMsgFirstRow, "Le Test", firstRow.get(idxAccountDescriptiveName));
+    assertEquals(assertMsgFirstRow, "1420000", firstRow.get(idxCost));
+    assertEquals(assertMsgFirstRow, "10", firstRow.get(idxClicks));
+    assertEquals(assertMsgFirstRow, "1978", firstRow.get(idxImpressions));
+    assertEquals(assertMsgFirstRow, "0", firstRow.get(idxConvertedClicks));
+    assertEquals(assertMsgFirstRow, "0.51%", firstRow.get(idxCtr));
 
     // Check last entry
     List<String> lastRow = report.getRow(rowsCount - 1);
     final String assertMsgLastRow = "Verify data in the last row";
-    assertEquals(assertMsgLastRow, lastRow.get(idxExternalCustomerId), "1232198123");
-    assertEquals(assertMsgLastRow, lastRow.get(idxDate), "2013-05-10");
-    assertEquals(assertMsgLastRow, lastRow.get(idxAccountDescriptiveName), "Le Test");
-    assertEquals(assertMsgLastRow, lastRow.get(idxCost), "750000");
-    assertEquals(assertMsgLastRow, lastRow.get(idxClicks), "4");
-    assertEquals(assertMsgLastRow, lastRow.get(idxImpressions), "2793");
-    assertEquals(assertMsgLastRow, lastRow.get(idxConvertedClicks), "0");
-    assertEquals(assertMsgLastRow, lastRow.get(idxCtr), "0.14%");
+    assertEquals(assertMsgLastRow, "1232198123", lastRow.get(idxExternalCustomerId));
+    assertEquals(assertMsgLastRow, "2013-05-10", lastRow.get(idxDate));
+    assertEquals(assertMsgLastRow, "Le Test", lastRow.get(idxAccountDescriptiveName));
+    assertEquals(assertMsgLastRow, "750000", lastRow.get(idxCost));
+    assertEquals(assertMsgLastRow, "4", lastRow.get(idxClicks));
+    assertEquals(assertMsgLastRow, "2793", lastRow.get(idxImpressions));
+    assertEquals(assertMsgLastRow, "0", lastRow.get(idxConvertedClicks));
+    assertEquals(assertMsgLastRow, "0.14%", lastRow.get(idxCtr));
   }
 }

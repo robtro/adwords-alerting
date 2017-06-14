@@ -31,22 +31,22 @@ public class MoneyUtilTest {
   @Test
   public void testMicroAmountConversions() {
     final String assertMsg = "Verify micro amount to currency amount conversion.";
-    assertEquals(assertMsg, MoneyUtil.toCurrencyAmountStr(0L), "0");
+    assertEquals(assertMsg, "0", MoneyUtil.toCurrencyAmountStr(0L));
 
-    assertEquals(assertMsg, MoneyUtil.toCurrencyAmountStr(1000L), "0");
-    assertEquals(assertMsg, MoneyUtil.toCurrencyAmountStr(4999L), "0");
-    assertEquals(assertMsg, MoneyUtil.toCurrencyAmountStr(5001L), "0.01");
+    assertEquals(assertMsg, "0", MoneyUtil.toCurrencyAmountStr(1000L));
+    assertEquals(assertMsg, "0", MoneyUtil.toCurrencyAmountStr(4999L));
+    assertEquals(assertMsg, "0.01", MoneyUtil.toCurrencyAmountStr(5001L));
 
-    assertEquals(assertMsg, MoneyUtil.toCurrencyAmountStr(10000L), "0.01");
-    assertEquals(assertMsg, MoneyUtil.toCurrencyAmountStr(14999L), "0.01");
-    assertEquals(assertMsg, MoneyUtil.toCurrencyAmountStr(15001L), "0.02");
+    assertEquals(assertMsg, "0.01", MoneyUtil.toCurrencyAmountStr(10000L));
+    assertEquals(assertMsg, "0.01", MoneyUtil.toCurrencyAmountStr(14999L));
+    assertEquals(assertMsg, "0.02", MoneyUtil.toCurrencyAmountStr(15001L));
 
-    assertEquals(assertMsg, MoneyUtil.toCurrencyAmountStr(100000L), "0.1");
-    assertEquals(assertMsg, MoneyUtil.toCurrencyAmountStr(105001L), "0.11");
+    assertEquals(assertMsg, "0.1", MoneyUtil.toCurrencyAmountStr(100000L));
+    assertEquals(assertMsg, "0.11", MoneyUtil.toCurrencyAmountStr(105001L));
 
-    assertEquals(assertMsg, MoneyUtil.toCurrencyAmountStr(10000000L), "10");
-    assertEquals(assertMsg, MoneyUtil.toCurrencyAmountStr(10100000L), "10.1");
-    assertEquals(assertMsg, MoneyUtil.toCurrencyAmountStr(10110000L), "10.11");
-    assertEquals(assertMsg, MoneyUtil.toCurrencyAmountStr(10111000L), "10.11");
+    assertEquals(assertMsg, "10", MoneyUtil.toCurrencyAmountStr(10000000L));
+    assertEquals(assertMsg, "10.1", MoneyUtil.toCurrencyAmountStr(10100000L));
+    assertEquals(assertMsg, "10.11", MoneyUtil.toCurrencyAmountStr(10110000L));
+    assertEquals(assertMsg, "10.11", MoneyUtil.toCurrencyAmountStr(10111000L));
   }
 }

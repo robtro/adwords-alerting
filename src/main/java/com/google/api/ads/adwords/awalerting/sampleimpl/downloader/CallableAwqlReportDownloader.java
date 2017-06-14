@@ -18,25 +18,20 @@ import com.google.api.ads.adwords.awalerting.AlertProcessingException;
 import com.google.api.ads.adwords.awalerting.report.AwqlReportQuery;
 import com.google.api.ads.adwords.awalerting.report.ReportData;
 import com.google.api.ads.adwords.awalerting.report.ReportDataLoader;
-import com.google.api.ads.adwords.awalerting.util.RetryHelper;
+import com.google.api.ads.adwords.awalerting.util.AdWordsServicesUtil;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
-import com.google.api.ads.adwords.lib.jaxb.v201605.DownloadFormat;
+import com.google.api.ads.adwords.lib.jaxb.v201705.DownloadFormat;
 import com.google.api.ads.adwords.lib.utils.ReportDownloadResponse;
 import com.google.api.ads.adwords.lib.utils.ReportDownloadResponseException;
 import com.google.api.ads.adwords.lib.utils.ReportException;
-import com.google.api.ads.adwords.lib.utils.v201605.DetailedReportDownloadResponseException;
-import com.google.api.ads.adwords.lib.utils.v201605.ReportDownloader;
-import com.google.common.annotations.VisibleForTesting;
+import com.google.api.ads.adwords.lib.utils.v201705.ReportDownloaderInterface;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.Callable;
 import java.util.zip.GZIPInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This {@link Callable} implements the core logic to download the reporting data from the AdWords
@@ -44,15 +39,6 @@ import java.util.zip.GZIPInputStream;
  */
 public class CallableAwqlReportDownloader implements Callable<ReportData> {
   private static final Logger LOGGER = LoggerFactory.getLogger(CallableAwqlReportDownloader.class);
-
-  private static final int MAX_NUMBER_OF_ATTEMPTS = 20;
-  private static final int BACKOFF_INTERVAL = 1000 * 5;
-
-  private static final ImmutableList<Class<? extends Exception>> NON_RETRIABLE_EXCEPTIONS =
-      ImmutableList.<Class<? extends Exception>>of(DetailedReportDownloadResponseException.class);
-
-  private int maxNumberOfAttempts = MAX_NUMBER_OF_ATTEMPTS;
-  private int backoffInterval = BACKOFF_INTERVAL;
 
   private final AdWordsSession session;
   private final AwqlReportQuery reportQuery;
@@ -78,35 +64,21 @@ public class CallableAwqlReportDownloader implements Callable<ReportData> {
    */
   @Override
   public ReportData call() throws AlertProcessingException {
-    // Retry on downloading report.
-    Callable<ReportDownloadResponse> callable = new Callable<ReportDownloadResponse>() {
-      @Override
-      public ReportDownloadResponse call() throws AlertProcessingException {
-        return getReportDownloadResponse();
-      }
-    };
+    ReportDownloaderInterface reportDownloader =
+        AdWordsServicesUtil.getUtility(session, ReportDownloaderInterface.class);
 
-    ReportDownloadResponse reportDownloadResponse = RetryHelper.callsWithRetries(callable,
-        "download report", maxNumberOfAttempts, backoffInterval, NON_RETRIABLE_EXCEPTIONS);
-
+    ReportDownloadResponse reportDownloadResponse = null;
+    try {
+      reportDownloadResponse =
+          reportDownloader.downloadReport(reportQuery.generateAWQL(), DownloadFormat.GZIPPED_CSV);
+    } catch (ReportException | ReportDownloadResponseException e) {
+      String msg = "Failed to download report account " + session.getClientCustomerId() + ".";
+      LOGGER.error(msg, e);
+      throw new AlertProcessingException(msg, e);
+    }
+    
     InputStream inputStream = reportDownloadResponse.getInputStream();
     return handleReportStreamResult(inputStream);
-  }
-
-  /**
-   * Gets the report download response from the API.
-   */
-  protected ReportDownloadResponse getReportDownloadResponse() throws AlertProcessingException {
-    try {
-      ReportDownloader reportDownloader = new ReportDownloader(session);
-      return reportDownloader.downloadReport(
-          reportQuery.generateAWQL(), DownloadFormat.GZIPPED_CSV);
-    } catch (ReportException e) {
-      throw new AlertProcessingException("ReportException occurs when downloading report.", e);
-    } catch (ReportDownloadResponseException e) {
-      throw new AlertProcessingException(
-          "ReportDownloadResponseException occurs when downloading report.", e);
-    }
   }
 
   /**
@@ -141,17 +113,5 @@ public class CallableAwqlReportDownloader implements Callable<ReportData> {
       LOGGER.error(errorMsg);
       throw new AlertProcessingException(errorMsg, e);
     }
-  }
-  
-  @VisibleForTesting
-  protected void setMaxNumberOfAttempts(int maxNumberOfAttempts) {
-    Preconditions.checkArgument(maxNumberOfAttempts > 0, "maxNumberOfAttempts must be positive.");
-    this.maxNumberOfAttempts = maxNumberOfAttempts;
-  }
-
-  @VisibleForTesting
-  protected void setBackoffInterval(int backoffInterval) {
-    Preconditions.checkArgument(backoffInterval >= 0, "backoffInterval must be non-negative.");
-    this.backoffInterval = backoffInterval;
   }
 }

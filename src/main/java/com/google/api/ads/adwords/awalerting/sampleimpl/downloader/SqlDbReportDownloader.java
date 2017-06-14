@@ -14,32 +14,28 @@
 
 package com.google.api.ads.adwords.awalerting.sampleimpl.downloader;
 
-import com.google.api.ads.adwords.awalerting.AlertProcessingException;
 import com.google.api.ads.adwords.awalerting.AlertReportDownloader;
 import com.google.api.ads.adwords.awalerting.report.ReportData;
 import com.google.api.ads.adwords.awalerting.util.DateRange;
-import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionReportType;
+import com.google.api.ads.adwords.awalerting.util.JdbcUtil;
+import com.google.api.ads.adwords.jaxws.v201705.cm.ReportDefinitionReportType;
 import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.rowset.SqlRowSet;
 
 /**
  * Class to download report data from database (such as aw-reporting's local database).
@@ -56,6 +52,7 @@ import java.util.Set;
  *     "Password": "1234"
  *   },
  *   "ReportQuery": {
+ *     "ReportType": "ACCOUNT_PERFORMANCE_REPORT",
  *     "Table": "AW_ReportKeywords",
  *     "ColumnMappings": [
  *       {
@@ -90,26 +87,24 @@ import java.util.Set;
  * </pre>
  */
 public class SqlDbReportDownloader implements AlertReportDownloader {
-
   private static final Logger LOGGER = LoggerFactory.getLogger(SqlDbReportDownloader.class);
 
-  // config keys for database connection.
+  // Config keys for database connection.
   private static final String DATABASE_TAG = "Database";
   private static final String DRIVER_TAG = "Driver";
   private static final String URL_TAG = "Url";
   private static final String LOGIN_TAG = "Login";
   private static final String PASSWORD_TAG = "Password";
 
-  // config keys for database query.
+  // Config keys for database query.
   private static final String REPORT_QUERY_TAG = "ReportQuery";
+  private static final String REPORT_TYPE_TAG = "ReportType";
   private static final String TABLE_TAG = "Table";
   private static final String COLUMN_MAPPINGS_TAG = "ColumnMappings";
   private static final String DATABASE_COLUMN_NAME_TAG = "DatabaseColumnName";
   private static final String REPORT_COLUMN_NAME_TAG = "ReportDataColumnName";
   private static final String CONDITIONS_TAG = "Conditions";
   private static final String DATE_RANGE_TAG = "DateRange";
-
-  private static final String DEFAULT_DB_DRIVER = "com.mysql.jdbc.Driver";
 
   private static final String DATE_COLUMN_NAME = "Day";
   private static final String DATA_RANGE_CONDITION_FORMAT = "DATE(%s) BETWEEN %s AND %s";
@@ -123,145 +118,72 @@ public class SqlDbReportDownloader implements AlertReportDownloader {
 
   @Override
   public List<ReportData> downloadReports(
-      ImmutableAdWordsSession protoSession, Set<Long> clientCustomerIds)
-      throws AlertProcessingException {
+      ImmutableAdWordsSession protoSession, Set<Long> clientCustomerIds) {
     Map<Long, ReportData> reportDataMap = new HashMap<Long, ReportData>();
-
-    Connection dbConnection = null;
-    Statement dbStatement = null;
-    ResultSet dbResult = null;
-
-    try {
-      dbConnection = getDbConnection();
-      LOGGER.info(
-          "Downloading report data from SQL server: {}", dbConnection.getMetaData().getURL());
-
-      List<String> reportColumnNames = new ArrayList<String>();
-      String sqlQuery = getSqlQueryWithReportColumnNames(reportColumnNames);
-      LOGGER.info("Using the following query: {}", sqlQuery);
-
-      dbStatement = dbConnection.createStatement();
-      dbResult = dbStatement.executeQuery(sqlQuery);
-
-      int columns = reportColumnNames.size();
-      // SQL query and ResultSet should match in # of columns
-      Preconditions.checkState(columns == dbResult.getMetaData().getColumnCount());
-
-      int customerIdColumnIndex =
-          reportColumnNames.indexOf(EXTERNAL_CUSTOMER_ID_REPORT_COLUMN_NAME);
-      Preconditions.checkArgument(
-          customerIdColumnIndex >= 0,
-          "You must choose \"%s\" field to generate report data",
-          EXTERNAL_CUSTOMER_ID_REPORT_COLUMN_NAME);
-
-      while (dbResult.next()) {
-        List<String> row = new ArrayList<String>(columns);
-        for (int columnCount = 1; columnCount <= columns; columnCount++) {
-          row.add(dbResult.getString(columnCount));
-        }
-
-        String customerIdStr = row.get(customerIdColumnIndex);
-        Long customerId = Long.parseLong(customerIdStr);
-        ReportData reportData = reportDataMap.get(customerId);
-        if (reportData == null) {
-          // ReportDefinitionReportType doesn't really matter (just for some printing purpose),
-          // so don't bother find it from database table name.
-          reportData =
-              new ReportData(customerId, ReportDefinitionReportType.UNKNOWN, reportColumnNames);
-          reportDataMap.put(customerId, reportData);
-        }
-        reportData.addRow(row);
-      }
-    } catch (SQLException e) {
-      throw new AlertProcessingException("Failed to query database!", e);
-    } finally {
-      // Close all resources
-      if (dbResult != null) {
-        try {
-          dbResult.close();
-        } catch (SQLException e) {
-          // do nothing
-        }
+    
+    JdbcTemplate jdbcTemplate = getJdbcTemplate();
+    String sqlQuery = getSqlQueryWithReportColumnNames();
+    ReportDefinitionReportType reportType = getReportType();
+    SqlRowSet rowSet = jdbcTemplate.queryForRowSet(sqlQuery);
+    
+    // Get the column index of customer id. 
+    int customerIdColumnIndex = rowSet.findColumn(EXTERNAL_CUSTOMER_ID_REPORT_COLUMN_NAME);
+    Preconditions.checkState(
+        customerIdColumnIndex >= 0,
+        "You must choose \"%s\" field to generate report data",
+        EXTERNAL_CUSTOMER_ID_REPORT_COLUMN_NAME);
+    
+    List<String> columnNames = Arrays.asList(rowSet.getMetaData().getColumnNames());
+    int columns = columnNames.size();
+    
+    // Read result into map.
+    int rows = 0;
+    while (rowSet.next()) {
+      rows++;
+      List<String> row = new ArrayList<String>(columns);
+      for (int i = 0; i < columns; i++) {
+        row.add(rowSet.getString(i));
       }
 
-      if (dbStatement != null) {
-        try {
-          dbStatement.close();
-        } catch (SQLException e) {
-          // do nothing
-        }
+      String customerIdStr = row.get(customerIdColumnIndex);
+      Long customerId = Long.parseLong(customerIdStr);
+      ReportData reportData = reportDataMap.get(customerId);
+      if (reportData == null) {
+        reportData = new ReportData(customerId, reportType, columnNames);
+        reportDataMap.put(customerId, reportData);
       }
-
-      if (dbConnection != null) {
-        try {
-          dbConnection.close();
-        } catch (SQLException e) {
-          // do nothing
-        }
-      }
+      reportData.addRow(row);
     }
-
+    
+    LOGGER.info("Retrieved and parsed {} rows from database.", rows);
     return new ArrayList<ReportData>(reportDataMap.values());
   }
 
   /**
-   * Establish database connection according to config.
+   * Create a JcbcTemplate according to config.
    */
-  private Connection getDbConnection() throws AlertProcessingException {
+  private JdbcTemplate getJdbcTemplate() {
     Preconditions.checkArgument(
         config.has(DATABASE_TAG), "Missing compulsory property: %s", DATABASE_TAG);
     JsonObject dbConfig = config.get(DATABASE_TAG).getAsJsonObject();
-
-    String driver = DEFAULT_DB_DRIVER;
-    if (dbConfig.has(DRIVER_TAG)) {
-      driver = dbConfig.get(DRIVER_TAG).getAsString();
-    }
-
+    
+    return JdbcUtil.createJdbcTemplate(dbConfig, DRIVER_TAG, URL_TAG, LOGIN_TAG, PASSWORD_TAG);
+  }
+  
+  private JsonObject getQueryConfig() {
     Preconditions.checkArgument(
-        dbConfig.has(URL_TAG), "Missing compulsory property: %s - %s", DATABASE_TAG, URL_TAG);
-    String url = dbConfig.get(URL_TAG).getAsString();
-
-    String login = null;
-    if (dbConfig.has(LOGIN_TAG)) {
-      login = dbConfig.get(LOGIN_TAG).getAsString();
-    }
-
-    String password = null;
-    if (dbConfig.has(PASSWORD_TAG)) {
-      password = dbConfig.get(PASSWORD_TAG).getAsString();
-    }
-
-    Connection dbConnection;
-    try {
-      // Register driver.
-      Class.forName(driver);
-
-      // Open a DB connection.
-      if (login == null && password == null) {
-        dbConnection = DriverManager.getConnection(url);
-      } else {
-        dbConnection = DriverManager.getConnection(url, login, password);
-      }
-    } catch (ClassNotFoundException e) {
-      throw new AlertProcessingException("Cannot find driver class: " + driver, e);
-    } catch (SQLException e) {
-      throw new AlertProcessingException("Fail to establish database exception.", e);
-    }
-
-    return dbConnection;
+        config.has(REPORT_QUERY_TAG), "Missing compulsory property: %s", REPORT_QUERY_TAG);
+    return config.get(REPORT_QUERY_TAG).getAsJsonObject();
   }
 
   /**
    * Get SQL query string according to config, and build column names list.
    *
-   * @param reportColumnNames an empty list of string to be filled with column names
    * @return the sql query string
    */
-  private String getSqlQueryWithReportColumnNames(List<String> reportColumnNames) {
-    Preconditions.checkArgument(
-        config.has(REPORT_QUERY_TAG), "Missing compulsory property: %s", REPORT_QUERY_TAG);
-    JsonObject queryConfig = config.get(REPORT_QUERY_TAG).getAsJsonObject();
-
+  private String getSqlQueryWithReportColumnNames() {
+    JsonObject queryConfig = getQueryConfig();
+    
     StringBuilder sqlQueryBuilder = new StringBuilder();
     sqlQueryBuilder.append("SELECT ");
 
@@ -275,8 +197,8 @@ public class SqlDbReportDownloader implements AlertReportDownloader {
     Map<String, String> fieldsMapping = new LinkedHashMap<String, String>(columnMappings.size());
 
     // Process database column -> report column mapping
-    reportColumnNames.clear();
-    String dbColumnName, reportColumnName;
+    String dbColumnName;
+    String reportColumnName;
     for (JsonElement columnMapping : columnMappings) {
       JsonObject mapping = columnMapping.getAsJsonObject();
       Preconditions.checkArgument(
@@ -294,7 +216,6 @@ public class SqlDbReportDownloader implements AlertReportDownloader {
       dbColumnName = mapping.get(DATABASE_COLUMN_NAME_TAG).getAsString();
       reportColumnName = mapping.get(REPORT_COLUMN_NAME_TAG).getAsString();
       fieldsMapping.put(dbColumnName, reportColumnName);
-      reportColumnNames.add(reportColumnName);
     }
 
     sqlQueryBuilder.append(Joiner.on(", ").withKeyValueSeparator(" AS ").join(fieldsMapping));
@@ -324,7 +245,25 @@ public class SqlDbReportDownloader implements AlertReportDownloader {
           .append(hasWhereClause ? " AND " : " WHERR ")
           .append(queryConfig.get(CONDITIONS_TAG).getAsString());
     }
+    
+    String sqlQuery = sqlQueryBuilder.toString();
+    LOGGER.info("SQL query: {}", sqlQuery);
+    return sqlQuery;
+  }
+  
+  /**
+   * Get report type from the config, defaulting to the unknown type.
+   * @return the report type
+   */
+  private ReportDefinitionReportType getReportType() {
+    JsonObject queryConfig = getQueryConfig();
+    
+    ReportDefinitionReportType reportType = ReportDefinitionReportType.UNKNOWN;
+    if (queryConfig.has(REPORT_TYPE_TAG)) {
+      String reportTypeStr = queryConfig.get(REPORT_TYPE_TAG).getAsString();
+      reportType = ReportDefinitionReportType.valueOf(reportTypeStr);
+    }
 
-    return sqlQueryBuilder.toString();
+    return reportType;
   }
 }

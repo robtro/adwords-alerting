@@ -187,7 +187,6 @@ public class AwAlerting {
     return alertsConfig;
   }
 
-
   /**
    * Read the account ids from the stream.
    *

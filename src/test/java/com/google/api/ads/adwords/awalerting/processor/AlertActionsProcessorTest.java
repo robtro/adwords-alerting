@@ -23,7 +23,10 @@ import com.google.api.ads.adwords.awalerting.report.ReportData;
 import com.google.api.ads.adwords.awalerting.util.ConfigTags;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,11 +37,6 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Test case for the {@link AlertActionsProcessor} class.
@@ -67,8 +65,10 @@ public class AlertActionsProcessorTest {
   
   @Test
   public void testConstruction() {
-    assertEquals("Number of alert actions should match config setting.",
-                 alertActionsProcessor.getActionsSize(), NUMBER_OF_ACTIONS);
+    assertEquals(
+        "Number of alert actions should match config setting.",
+        NUMBER_OF_ACTIONS,
+        alertActionsProcessor.getActionsSize());
   }
   
   @Test
@@ -92,8 +92,10 @@ public class AlertActionsProcessorTest {
         Mockito.<ExecutorService>anyObject(),
         Mockito.<RunnableAlertActionProcessor>anyObject(),
         argument.capture());
-   
-    assertEquals("CountDownLactch should reach 0 after all alert action jobs complete",
-        argument.getValue().getCount(), 0);
+
+    assertEquals(
+        "CountDownLactch should reach 0 after all alert action jobs complete",
+        0,
+        argument.getValue().getCount());
   }
 }

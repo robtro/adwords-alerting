@@ -20,7 +20,7 @@ import com.google.api.ads.adwords.awalerting.authentication.Authenticator;
 import com.google.api.ads.adwords.awalerting.report.ReportData;
 import com.google.api.ads.adwords.awalerting.util.ConfigTags;
 import com.google.api.ads.adwords.awalerting.util.ManagedCustomerDelegate;
-import com.google.api.ads.adwords.jaxws.v201605.mcm.ApiException;
+import com.google.api.ads.adwords.jaxws.v201705.mcm.ApiException;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
 import com.google.api.ads.adwords.lib.client.AdWordsSession.ImmutableAdWordsSession;
 import com.google.api.ads.common.lib.exception.OAuthException;
@@ -30,18 +30,16 @@ import com.google.common.base.Stopwatch;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Main reporting processor responsible for downloading report files to the file system, parsing

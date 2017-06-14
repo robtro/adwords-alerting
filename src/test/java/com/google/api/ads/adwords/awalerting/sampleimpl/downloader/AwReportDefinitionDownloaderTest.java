@@ -15,18 +15,15 @@
 package com.google.api.ads.adwords.awalerting.sampleimpl.downloader;
 
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.google.api.ads.adwords.awalerting.AlertProcessingException;
 import com.google.api.ads.adwords.awalerting.util.TestEntitiesGenerator;
-import com.google.api.ads.adwords.jaxws.v201605.cm.ApiException_Exception;
-import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionField;
-import com.google.api.ads.adwords.jaxws.v201605.cm.ReportDefinitionReportType;
+import com.google.api.ads.adwords.jaxws.v201705.cm.ReportDefinitionReportType;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
 import com.google.api.ads.common.lib.exception.ValidationException;
-
+import java.util.HashMap;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,8 +31,6 @@ import org.junit.runners.JUnit4;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
-
-import java.util.ArrayList;
 
 /**
  * Test case for the {@link AwReportDefinitionDownloader} class.
@@ -48,46 +43,19 @@ public class AwReportDefinitionDownloaderTest {
   @Before
   public void setUp() throws ValidationException {
     AdWordsSession session = TestEntitiesGenerator.getTestAdWordsSession();
-    
     mockedAwReportDefinitionDownloader = new AwReportDefinitionDownloader(session);
-    mockedAwReportDefinitionDownloader.setMaxNumberOfAttempts(5);
-    mockedAwReportDefinitionDownloader.setBackoffInterval(0);
-
     MockitoAnnotations.initMocks(this);
   }
 
   @Test
   public void testGetFieldsMapping() throws AlertProcessingException {
-    doReturn(new ArrayList<ReportDefinitionField>())
+    doReturn(new HashMap<String, String>())
         .when(mockedAwReportDefinitionDownloader)
-        .downloadReportDefinitionFields(Mockito.<ReportDefinitionReportType>anyObject());
+        .generateFieldsMapping(Mockito.<ReportDefinitionReportType>anyObject());
 
     ReportDefinitionReportType reportType = ReportDefinitionReportType.ACCOUNT_PERFORMANCE_REPORT;
     mockedAwReportDefinitionDownloader.getFieldsMapping(reportType);
 
-    verify(mockedAwReportDefinitionDownloader, times(1)).downloadReportDefinitionFields(reportType);
-    verify(mockedAwReportDefinitionDownloader, times(1)).getFieldsMapping(reportType);
-  }
-
-  @Test
-  public void testGetFieldsMapping_retries() throws AlertProcessingException {
-    ApiException_Exception apiEx = new ApiException_Exception(
-        "ApiException", new com.google.api.ads.adwords.jaxws.v201605.cm.ApiException());
-    AlertProcessingException ex = new AlertProcessingException(
-        "ApiException_Exception occurred when downloading report definition.", apiEx);
-    doThrow(ex)
-        .when(mockedAwReportDefinitionDownloader)
-        .downloadReportDefinitionFields(Mockito.<ReportDefinitionReportType>anyObject());
-
-    ReportDefinitionReportType reportType = ReportDefinitionReportType.ACCOUNT_PERFORMANCE_REPORT;
-    try {
-      mockedAwReportDefinitionDownloader.getFieldsMapping(reportType);
-    } catch (AlertProcessingException e) {
-      // Do nothing when the last retry fails and throws. The verify() calls below are used to
-      // check the expected number of retries.
-    }
-
-    verify(mockedAwReportDefinitionDownloader, times(5)).downloadReportDefinitionFields(reportType);
     verify(mockedAwReportDefinitionDownloader, times(1)).getFieldsMapping(reportType);
   }
 }

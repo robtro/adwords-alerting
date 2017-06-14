@@ -24,7 +24,11 @@ import com.google.api.ads.adwords.awalerting.util.ConfigTags;
 import com.google.api.ads.adwords.awalerting.util.TestEntitiesGenerator;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,12 +39,6 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Test case for the {@link AlertRulesProcessor} class.
@@ -71,8 +69,10 @@ public class AlertRulesProcessorTest {
   
   @Test
   public void testConstruction() {
-    assertEquals("Number of alert rules should match config setting.",
-        alertRulesProcessor.getRulesCount(), NUMBER_OF_RULES);
+    assertEquals(
+        "Number of alert rules should match config setting.",
+        NUMBER_OF_RULES,
+        alertRulesProcessor.getRulesCount());
   }
   
   @Test
@@ -101,8 +101,10 @@ public class AlertRulesProcessorTest {
         Mockito.<ExecutorService>anyObject(),
         Mockito.<RunnableAlertRulesProcessor>anyObject(),
         argument.capture());
-   
-    assertEquals("CountDownLactch should reach 0 after all alert rule jobs complete",
-        argument.getValue().getCount(), 0);
+
+    assertEquals(
+        "CountDownLactch should reach 0 after all alert rule jobs complete",
+        0,
+        argument.getValue().getCount());
   }
 }
