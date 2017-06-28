@@ -28,7 +28,7 @@
         "ClassName": "AwqlReportDownloader",
         "ReportQuery": {
           "ReportType": "CAMPAIGN_PERFORMANCE_REPORT",
-          "Fields": "ExternalCustomerId,AccountDescriptiveName,CampaignId,CampaignName,Impressions,Clicks,ConvertedClicks",
+          "Fields": "ExternalCustomerId,AccountDescriptiveName,CampaignId,CampaignName,Impressions,Clicks,Conversions",
           "Conditions": "Impressions < 1000",
           "DateRange": "LAST_7_DAYS"
         }
